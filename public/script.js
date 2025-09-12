@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const PrintItem = (entry, target) => {
     if (entry) {
       document.getElementById(target).innerHTML += `
-        <a href="${entry.Link}" target="_blank" class="hypothesis book w-inline-block">
+        <a href="${entry.Link}" target="_blank" class="hypothesis book responsive w-inline-block">
           <span>${i + 1 < 10 ? "0" + (i + 1) : i + 1}</span>
           <h4 class="idea-header book">${entry.Name}</h4>
           <span class="author" title="${entry.Author}">${entry.Author.length > 30 ? entry.Author.slice(0, 30) + "..." : entry.Author}</span>
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </a>`;
     } else {
       document.getElementById(target).innerHTML += `
-        <a href="https://github.com/apartresearch/readingwhatwecan/edit/main/public/books.js" target="_blank" class="hypothesis book w-inline-block">
+        <a href="https://github.com/apartresearch/readingwhatwecan/edit/main/public/books.js" target="_blank" class="hypothesis book responsive w-inline-block">
           <span>${i + 1 < 10 ? "0" + (i + 1) : i + 1}</span>
           <h4 class="idea-header book">Click to suggest a book</h4>
           <span class="author">Github</span>
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const booksScript = document.querySelector('script[src="https://readingwhatwecan.com/books.js"]');
   if (booksScript) {
     booksScript.addEventListener('load', () => {
-      for (let i = 0; i < 20; i++) {
+      for (var i = 0; i < 20; i++) {
         PrintItem(first_entry[i], "beginner-parent");
         PrintItem(ml[i], "ml-parent");
         PrintItem(ais[i], "aisafety-parent");
