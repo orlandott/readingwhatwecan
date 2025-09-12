@@ -41,16 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Ensure books.js is loaded before rendering
-  const booksScript = document.querySelector('script[src="https://readingwhatwecan.com/books.js"]');
-  if (booksScript) {
-    booksScript.addEventListener('load', () => {
-      for (var i = 0; i < 20; i++) {
-        PrintItem(first_entry[i], "beginner-parent");
-        PrintItem(ml[i], "ml-parent");
-        PrintItem(ais[i], "aisafety-parent");
-        PrintItem(scifi[i], "scifi-parent");
-      }
-    });
-  }
+  // Render books after DOM is loaded and books.js is available
+  window.addEventListener('load', () => {
+    for (var i = 0; i < 20; i++) {
+      PrintItem(first_entry[i], "beginner-parent");
+      PrintItem(ml[i], "ml-parent");
+      PrintItem(ais[i], "aisafety-parent");
+      PrintItem(scifi[i], "scifi-parent");
+    }
+  });
 });
