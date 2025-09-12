@@ -18,10 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const PrintItem = (entry, target, i) => {
-    const parent = document.getElementById(target);
+  const PrintItem = (entry, target) => {
     if (entry) {
-      parent.innerHTML += `
+      document.getElementById(target).innerHTML += `
         <a href="${entry.Link}" target="_blank" class="hypothesis book w-inline-block">
           <span>${i + 1 < 10 ? "0" + (i + 1) : i + 1}</span>
           <h4 class="idea-header book">${entry.Name}</h4>
@@ -31,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${entry.Image ? `<img class="book-image" src="${entry.Image}" loading="lazy" alt="" />` : ""}
         </a>`;
     } else {
-      parent.innerHTML += `
+      document.getElementById(target).innerHTML += `
         <a href="https://github.com/apartresearch/readingwhatwecan/edit/main/public/books.js" target="_blank" class="hypothesis book w-inline-block">
           <span>${i + 1 < 10 ? "0" + (i + 1) : i + 1}</span>
           <h4 class="idea-header book">Click to suggest a book</h4>
@@ -42,10 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  for (let i = 0; i < 20; i++) {
-    PrintItem(window.first_entry?.[i], "beginner-parent", i);
-    PrintItem(window.ml?.[i], "ml-parent", i);
-    PrintItem(window.ais?.[i], "aisafety-parent", i);
-    PrintItem(window.scifi?.[i], "scifi-parent", i);
+  // Ensure books.js is loaded before rendering
+  const booksScript = document.querySelector('script[src="https://readingwhatwecan.com/books.js"]');
+  if (booksScript) {
+    booksScript.addEventListener('load', () => {
+      for (let i = 0; i < 20; i++) {
+        PrintItem(first_entry[i], "beginner-parent");
+        PrintItem(ml[i], "ml-parent");
+        PrintItem(ais[i], "aisafety-parent");
+        PrintItem(scifi[i], "scifi-parent");
+      }
+    });
   }
 });
