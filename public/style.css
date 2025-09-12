@@ -4,6 +4,10 @@ body {
   color: #e5e7eb;
 }
 
+.nav-logo {
+  filter: invert(1) grayscale(1) brightness(1.5);
+}
+
 .book-image {
   max-width: 200px;
   height: auto;
