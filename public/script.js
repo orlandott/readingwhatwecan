@@ -18,11 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const PrintItem = (entry, target) => {
+  const PrintItem = (entry, target, index) => {
     if (entry) {
       document.getElementById(target).innerHTML += `
         <a href="${entry.Link}" target="_blank" class="hypothesis book responsive w-inline-block">
-          <span>${i + 1 < 10 ? "0" + (i + 1) : i + 1}</span>
+          <span>${index + 1 < 10 ? "0" + (index + 1) : index + 1}</span>
           <h4 class="idea-header book">${entry.Name}</h4>
           <span class="author" title="${entry.Author}">${entry.Author.length > 30 ? entry.Author.slice(0, 30) + "..." : entry.Author}</span>
           <span class="link">${entry.Link.includes("amazon") ? "Amazon" : entry.Link.includes(".pdf") ? "PDF" : entry.Link.includes("lesswrong") ? "LessWrong" : entry.Link.includes("arxiv") ? "ArXiv" : entry.Link.includes("docs.google") ? "Google Docs" : "Article"} <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       document.getElementById(target).innerHTML += `
         <a href="https://github.com/apartresearch/readingwhatwecan/edit/main/public/books.js" target="_blank" class="hypothesis book responsive w-inline-block">
-          <span>${i + 1 < 10 ? "0" + (i + 1) : i + 1}</span>
+          <span>${index + 1 < 10 ? "0" + (index + 1) : index + 1}</span>
           <h4 class="idea-header book">Click to suggest a book</h4>
           <span class="author">Github</span>
           <span class="link">Link <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
@@ -41,13 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Render books after DOM is loaded and books.js is available
+  // Render books after DOM and resources are loaded
   window.addEventListener('load', () => {
     for (var i = 0; i < 20; i++) {
-      PrintItem(first_entry[i], "beginner-parent");
-      PrintItem(ml[i], "ml-parent");
-      PrintItem(ais[i], "aisafety-parent");
-      PrintItem(scifi[i], "scifi-parent");
+      PrintItem(first_entry[i], "beginner-parent", i);
+      PrintItem(ml[i], "ml-parent", i);
+      PrintItem(ais[i], "aisafety-parent", i);
+      PrintItem(scifi[i], "scifi-parent", i);
     }
   });
 });
