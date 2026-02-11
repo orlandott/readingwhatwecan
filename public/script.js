@@ -330,21 +330,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitSuggestionToAppsScript = async (data) => {
     const payload = new URLSearchParams();
     const trackLabel = trackLabels[data.track] || data.track;
+    // Send common aliases so different Apps Script schemas all receive values.
     payload.set("name", data.name);
+    payload.set("title", data.name);
+    payload.set("book_title", data.name);
     payload.set("author", data.author);
     payload.set("link", data.link);
     payload.set("pages", data.pages || "");
+    payload.set("track_label", trackLabel);
     payload.set("track", trackLabel);
+    payload.set("reading_track", trackLabel);
+    payload.set("readingTrack", trackLabel);
+    payload.set("category", trackLabel);
     payload.set("track_key", data.track || "");
     payload.set("submitted_at", new Date().toISOString());
     payload.set(
       "payload_json",
       JSON.stringify({
         name: data.name,
+        title: data.name,
         author: data.author,
         link: data.link,
         pages: data.pages || "",
         track: trackLabel,
+        reading_track: trackLabel,
+        category: trackLabel,
         track_key: data.track || "",
       })
     );
