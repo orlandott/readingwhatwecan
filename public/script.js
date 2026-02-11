@@ -263,7 +263,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "The Risks of Artificial Intelligence": {
       Image:
         "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Bill_Gates_June_2015.jpg/640px-Bill_Gates_June_2015.jpg",
-      ForceImage: true,
     },
     "Life 3.0": {
       Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
@@ -834,7 +833,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (seed.Image && (seed.ForceImage || !entry.Image || !entry.Image.trim())) {
+    if (seed.Image && (!entry.Image || !entry.Image.trim())) {
       entry.Image = sanitizeImageUrl(seed.Image);
     }
     if (!normalizePositiveInteger(entry.page_count) && normalizePositiveInteger(seed.page_count)) {
@@ -1735,34 +1734,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const hydrateAuthorPortrait = async (entry, coverElementId) => {
-    try {
-      if (!entry || !entry.Author || !coverElementId) {
-        return;
-      }
-
-      const portraitUrl = await fetchAuthorPortrait(entry.Author);
-      if (!portraitUrl || entry.Image === portraitUrl) {
-        return;
-      }
-
-      entry.Image = portraitUrl;
-      const coverElement = document.getElementById(coverElementId);
-      if (!coverElement) {
-        return;
-      }
-      const safeAlt = escapeHtml(`${entry.Author || entry.Name || "Author"} portrait`);
-      coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(portraitUrl)}" loading="lazy" alt="${safeAlt}" />`;
-      wireCoverFallback(coverElementId, entry.Name || "Book");
-    } catch (error) {
-      logResilienceWarning(
-        "author_portrait_hydration_failed",
-        { name: entry && entry.Name, author: entry && entry.Author },
-        error
-      );
-    }
-  };
-
   const metadataHydrationQueue = [];
   const queuedMetadataHydrationKeys = new Set();
   let activeMetadataHydrations = 0;
@@ -1917,7 +1888,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </article>`
       );
       wireCoverFallback(coverElementId, entry.Name || "Book");
-      void hydrateAuthorPortrait(entry, coverElementId);
 
       if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
         queueMetadataHydration(entry, { coverElementId, pageElementId, yearElementId });
