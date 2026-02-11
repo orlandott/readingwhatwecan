@@ -928,7 +928,6 @@ document.addEventListener("DOMContentLoaded", () => {
     normalizeTypeKey(getSourceLabel(getEntryPrimaryLink(entry)));
 
   const readingListSummaryElement = document.getElementById("reading-list-summary");
-  const readingTrackProgressElement = document.getElementById("reading-track-progress");
   const readingListPreviewElement = document.getElementById("reading-list-preview");
   let latestEntryLookup = new Map();
   let latestEntryCategoryLookup = new Map();
@@ -1075,7 +1074,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
   const renderReadingDashboard = () => {
-    if (!readingListSummaryElement || !readingTrackProgressElement || !readingListPreviewElement) {
+    if (!readingListSummaryElement || !readingListPreviewElement) {
       return;
     }
     const priorSectionOpenState = {};
@@ -1097,31 +1096,6 @@ document.addEventListener("DOMContentLoaded", () => {
     readingListSummaryElement.textContent = totalSaved
       ? `${totalSaved} saved • ${totalFinished} finished (${completionPercent}% complete)`
       : "Save resources to track progress.";
-
-    const trackProgressMarkup = Object.entries(trackLabels)
-      .map(([trackKey, trackLabel]) => {
-        const trackTotal = normalizePositiveInteger(latestTrackTotals.get(trackKey) || 0) || 0;
-        const trackRecords = records.filter(
-          (record) => getResolvedRecordCategory(record) === trackKey
-        );
-        const trackFinished = trackRecords.filter((record) => record.status === "finished").length;
-        const trackPercent = trackTotal
-          ? Math.round((trackFinished / trackTotal) * 100)
-          : 0;
-        return `
-          <div class="track-progress-item">
-            <div class="track-progress-top">
-              <span class="track-progress-label">${escapeHtml(trackLabel)}</span>
-              <span class="track-progress-count">${trackFinished}/${trackTotal}</span>
-            </div>
-            <div class="track-progress-bar">
-              <span class="track-progress-fill" style="width:${trackPercent}%"></span>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-    readingTrackProgressElement.innerHTML = trackProgressMarkup;
 
     if (!records.length) {
       readingListPreviewElement.innerHTML = `

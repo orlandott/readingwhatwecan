@@ -313,39 +313,6 @@ body.site-body {
   font-size: 0.79rem;
 }
 
-.reading-track-progress {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.4rem;
-  margin-bottom: 0.65rem;
-}
-
-.track-progress-item {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-soft);
-  padding: 0.5rem 0.6rem;
-}
-
-.track-progress-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.35rem;
-}
-
-.track-progress-label {
-  color: var(--text);
-  font-size: 0.74rem;
-  font-weight: 600;
-}
-
-.track-progress-count {
-  color: var(--muted);
-  font-size: 0.74rem;
-}
-
 .track-progress-bar {
   width: 100%;
   height: 8px;
@@ -819,10 +786,6 @@ body.site-body {
 
   .reading-dashboard-body {
     padding: 0.65rem 0.7rem 0.75rem;
-  }
-
-  .reading-track-progress {
-    grid-template-columns: 1fr;
   }
 
   .reading-list-item-actions,
