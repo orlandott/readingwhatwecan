@@ -118,6 +118,13 @@ document.addEventListener("DOMContentLoaded", () => {
       "Service Model",
     ],
   };
+  const categoryTargets = [
+    { key: "entry_point", parentId: "entry-point-parent" },
+    { key: "canon", parentId: "canon-parent" },
+    { key: "problem_space", parentId: "problem-space-parent" },
+    { key: "technical_frontier", parentId: "technical-frontier-parent" },
+    { key: "speculative_fiction", parentId: "speculative-fiction-parent" },
+  ];
 
   const knownPublicationYears = {
     "The Coming Technological Singularity (1994)": 1994,
@@ -395,19 +402,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const payload = await response.json();
     const items = payload && Array.isArray(payload.items) ? payload.items : [];
-    const match = items.find((item) => item && item.volumeInfo);
-    if (!match || !match.volumeInfo) {
+    const bestVolumeInfo = items
+      .map((item) => (item ? item.volumeInfo : null))
+      .filter(Boolean)
+      .sort((left, right) => {
+        const score = (volumeInfo) =>
+          (volumeInfo.imageLinks ? 2 : 0) +
+          (normalizePositiveInteger(volumeInfo.pageCount) ? 2 : 0) +
+          (volumeInfo.publishedDate ? 1 : 0);
+        return score(right) - score(left);
+      })[0];
+
+    if (!bestVolumeInfo) {
       return { coverUrl: "", pageCount: null, year: null };
     }
 
-    const links = match.volumeInfo.imageLinks || {};
+    const links = bestVolumeInfo.imageLinks || {};
     const coverUrl = links.thumbnail || links.smallThumbnail || "";
-    const publishedDate = match.volumeInfo.publishedDate || "";
+    const publishedDate = bestVolumeInfo.publishedDate || "";
     const publishedYearMatch = publishedDate.match(/\b(18|19|20)\d{2}\b/);
 
     return {
       coverUrl: coverUrl ? coverUrl.replace("http://", "https://") : "",
-      pageCount: normalizePositiveInteger(match.volumeInfo.pageCount),
+      pageCount: normalizePositiveInteger(bestVolumeInfo.pageCount),
       year: publishedYearMatch ? normalizeYear(publishedYearMatch[0]) : null,
     };
   };
@@ -534,9 +551,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const safeAuthor = escapeHtml(entry.Author || "Unknown author");
     const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
     const safeLink = escapeHtml(normalizedLink);
-    const coverElementId = `book-cover-${toSafeDomId(target)}-${index}`;
-    const pageElementId = `book-pages-${toSafeDomId(target)}-${index}`;
-    const yearElementId = `book-year-${toSafeDomId(target)}-${index}`;
+    const entryDomKey = toSafeDomId(
+      `${entry.Name || "untitled"}-${entry.Author || "unknown"}`
+    );
+    const coverElementId = `book-cover-${toSafeDomId(target)}-${entryDomKey}`;
+    const pageElementId = `book-pages-${toSafeDomId(target)}-${entryDomKey}`;
+    const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
     const pageCount = getPageCountLabel(entry);
     const yearValue = getEntryYear(entry);
     const yearText = yearValue ? `${yearValue}` : "";
@@ -590,25 +610,73 @@ document.addEventListener("DOMContentLoaded", () => {
     return byName;
   };
 
+  const sortControl = document.getElementById("category-sort-control");
+  const yearKnownOnlyToggle = document.getElementById("category-year-known-only");
+
+  const getSortMode = () => (sortControl && sortControl.value) || "curated";
+
+  const shouldFilterUnknownYears = () =>
+    Boolean(yearKnownOnlyToggle && yearKnownOnlyToggle.checked);
+
+  const compareEntriesByYearAsc = (left, right) => {
+    const leftYear = getEntryYear(left);
+    const rightYear = getEntryYear(right);
+    const leftHasYear = Number.isFinite(leftYear);
+    const rightHasYear = Number.isFinite(rightYear);
+
+    if (leftHasYear && rightHasYear) {
+      if (leftYear !== rightYear) {
+        return leftYear - rightYear;
+      }
+    } else if (leftHasYear) {
+      return -1;
+    } else if (rightHasYear) {
+      return 1;
+    }
+
+    return (left.Name || "").localeCompare(right.Name || "");
+  };
+
+  const sortSelectedEntries = (entries, sortMode) => {
+    if (sortMode === "year_desc") {
+      return [...entries].sort((left, right) => compareEntriesByYearAsc(right, left));
+    }
+    if (sortMode === "year_asc") {
+      return [...entries].sort(compareEntriesByYearAsc);
+    }
+    if (sortMode === "title_asc") {
+      return [...entries].sort((left, right) =>
+        (left.Name || "").localeCompare(right.Name || "")
+      );
+    }
+    return entries;
+  };
+
   const renderAllBooks = () => {
     const entryLookup = buildEntryLookup();
-    const categoryTargets = [
-      { key: "entry_point", parentId: "entry-point-parent" },
-      { key: "canon", parentId: "canon-parent" },
-      { key: "problem_space", parentId: "problem-space-parent" },
-      { key: "technical_frontier", parentId: "technical-frontier-parent" },
-      { key: "speculative_fiction", parentId: "speculative-fiction-parent" },
-    ];
+    const sortMode = getSortMode();
+    const filterUnknownYears = shouldFilterUnknownYears();
 
     categoryTargets.forEach(({ key, parentId }) => {
+      const categoryParent = document.getElementById(parentId);
+      if (!categoryParent) {
+        return;
+      }
+      categoryParent.innerHTML = "";
+
       const selectedEntries = (categoryBookNames[key] || [])
         .map((name) => entryLookup.get(name))
         .filter(Boolean);
 
-      selectedEntries.forEach((entry, index) => {
+      const filteredEntries = filterUnknownYears
+        ? selectedEntries.filter((entry) => Number.isFinite(getEntryYear(entry)))
+        : selectedEntries;
+      const orderedEntries = sortSelectedEntries(filteredEntries, sortMode);
+
+      orderedEntries.forEach((entry, index) => {
         renderBook(entry, parentId, index);
       });
-      renderBook(null, parentId, selectedEntries.length);
+      renderBook(null, parentId, orderedEntries.length);
     });
   };
 
@@ -784,6 +852,18 @@ document.addEventListener("DOMContentLoaded", () => {
           suggestionSubmitButton.textContent = "Send suggestion";
         }
       }
+    });
+  }
+
+  if (sortControl) {
+    sortControl.addEventListener("change", () => {
+      renderAllBooks();
+    });
+  }
+
+  if (yearKnownOnlyToggle) {
+    yearKnownOnlyToggle.addEventListener("change", () => {
+      renderAllBooks();
     });
   }
 

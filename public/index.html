@@ -103,6 +103,21 @@
           <a data-w-tab="speculative-fiction" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">Speculative Fiction</a>
         </div>
         <div class="w-tab-content w-full md:w-3/4">
+          <div class="category-controls" role="region" aria-label="Category sorting and filtering">
+            <label class="category-control-label" for="category-sort-control">
+              Sort
+              <select id="category-sort-control" class="category-control-input">
+                <option value="curated">Curated order</option>
+                <option value="year_desc">Newest publication year</option>
+                <option value="year_asc">Oldest publication year</option>
+                <option value="title_asc">Title (A-Z)</option>
+              </select>
+            </label>
+            <label class="category-control-toggle" for="category-year-known-only">
+              <input id="category-year-known-only" type="checkbox" />
+              Show only resources with known publication year
+            </label>
+          </div>
           <div data-w-tab="entry-point" class="w-tab-pane w--tab-active">
             <div class="category-intro">
               <h3 class="category-intro-title">The Entry Point (Primers & Essays)</h3>
