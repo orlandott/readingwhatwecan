@@ -14,6 +14,7 @@ window.RWWC_SUGGESTION_SUBMISSION = {
     fields: {
       name: "entry.1000000001",
       author: "entry.1000000002",
+      email: "entry.1000000006", // optional
       link: "entry.1000000003",
       pages: "entry.1000000004",
       track: "entry.1000000005",

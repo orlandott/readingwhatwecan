@@ -2,13 +2,14 @@
 
 Use this template when creating a copy of the suggestion form so the website can submit to it directly.
 
-## Required questions
+## Questions
 
 1. **Title** (Short answer, required)
 2. **Author** (Short answer, required)
-3. **Link** (Short answer, required)
-4. **Pages** (Short answer or number, optional)
-5. **Reading track** (Dropdown, required) with exact options:
+3. **Your email** (Short answer, optional)
+4. **Link** (Short answer, required)
+5. **Pages** (Short answer or number, optional)
+6. **Reading track** (Dropdown, required) with exact options:
    - The Entry Point (Primers & Essays)
    - The Canon (Foundational Books)
    - The Problem Space (Research Agendas & Concepts)
@@ -24,7 +25,7 @@ Use this template when creating a copy of the suggestion form so the website can
    - `mode: "google_form"`
    - `googleForm.formViewUrl`
    - `googleForm.formResponseUrl`
-   - each `googleForm.fields.<field>` `entry.<id>` mapping
+   - each `googleForm.fields.<field>` `entry.<id>` mapping (`email` is optional)
 5. Submit a pull request with only that config change.
 
 After this, suggestions submitted from the site are written to the Google Sheet attached to that form.

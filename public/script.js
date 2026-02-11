@@ -377,6 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fields: {
         name: "entry.1000000001",
         author: "entry.1000000002",
+        email: "entry.1000000006",
         link: "entry.1000000003",
         pages: "entry.1000000004",
         track: "entry.1000000005",
@@ -1071,6 +1072,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       name: (formData.get("name") || "").toString().trim(),
       author: (formData.get("author") || "").toString().trim(),
+      email: (formData.get("email") || "").toString().trim(),
       link: (formData.get("link") || "").toString().trim(),
       pages: (formData.get("pages") || "").toString().trim(),
       track: (formData.get("track") || "entry_point").toString(),
@@ -1130,6 +1132,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const payload = new URLSearchParams();
     payload.set(fields.name, data.name);
     payload.set(fields.author, data.author);
+    if (fields.email && isEntryField(fields.email) && data.email) {
+      payload.set(fields.email, data.email);
+    }
     payload.set(fields.link, data.link);
     payload.set(fields.pages, data.pages || "");
     payload.set(fields.track, trackLabels[data.track] || data.track);
@@ -1152,6 +1157,9 @@ document.addEventListener("DOMContentLoaded", () => {
     payload.set("title", data.name);
     payload.set("book_title", data.name);
     payload.set("author", data.author);
+    payload.set("email", data.email || "");
+    payload.set("submitter_email", data.email || "");
+    payload.set("contact_email", data.email || "");
     payload.set("link", data.link);
     payload.set("pages", data.pages || "");
     payload.set("track_label", trackLabel);
@@ -1167,6 +1175,7 @@ document.addEventListener("DOMContentLoaded", () => {
         name: data.name,
         title: data.name,
         author: data.author,
+        email: data.email || "",
         link: data.link,
         pages: data.pages || "",
         track: trackLabel,
