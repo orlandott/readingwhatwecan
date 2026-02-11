@@ -20,9 +20,10 @@ Use this template when creating a copy of the suggestion form so the website can
 2. Fill sample values, submit, and copy the generated URL.
 3. Extract the `entry.<id>` values from that URL.
 4. Update [`public/suggestion-form-config.js`](../public/suggestion-form-config.js) with:
-   - `formViewUrl`
-   - `formResponseUrl`
-   - each `entry.<id>` field mapping
+   - `mode: "google_form"`
+   - `googleForm.formViewUrl`
+   - `googleForm.formResponseUrl`
+   - each `googleForm.fields.<field>` `entry.<id>` mapping
 5. Submit a pull request with only that config change.
 
 After this, suggestions submitted from the site are written to the Google Sheet attached to that form.

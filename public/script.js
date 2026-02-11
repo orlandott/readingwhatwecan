@@ -17,18 +17,43 @@ document.addEventListener("DOMContentLoaded", () => {
     scifi: "AI safety-relevant sci-fi",
   };
 
-  const defaultGoogleFormConfig = {
-    formViewUrl: "https://docs.google.com/forms/d/e/REPLACE_WITH_FORM_ID/viewform",
-    formResponseUrl: "https://docs.google.com/forms/d/e/REPLACE_WITH_FORM_ID/formResponse",
-    fields: {
-      name: "entry.1000000001",
-      author: "entry.1000000002",
-      link: "entry.1000000003",
-      pages: "entry.1000000004",
-      track: "entry.1000000005",
+  const defaultSubmissionConfig = {
+    mode: "google_form",
+    appsScript: {
+      endpointUrl: "",
+      sheetUrl: "",
+    },
+    googleForm: {
+      formViewUrl: "https://docs.google.com/forms/d/e/REPLACE_WITH_FORM_ID/viewform",
+      formResponseUrl: "https://docs.google.com/forms/d/e/REPLACE_WITH_FORM_ID/formResponse",
+      fields: {
+        name: "entry.1000000001",
+        author: "entry.1000000002",
+        link: "entry.1000000003",
+        pages: "entry.1000000004",
+        track: "entry.1000000005",
+      },
     },
   };
-  const googleFormConfig = window.RWWC_GOOGLE_FORM || defaultGoogleFormConfig;
+  const rawSubmissionConfig = window.RWWC_SUGGESTION_SUBMISSION || {};
+  const legacyGoogleFormConfig = window.RWWC_GOOGLE_FORM || {};
+  const sourceGoogleFormConfig = rawSubmissionConfig.googleForm || legacyGoogleFormConfig;
+
+  const submissionConfig = {
+    mode: rawSubmissionConfig.mode || defaultSubmissionConfig.mode,
+    appsScript: {
+      ...defaultSubmissionConfig.appsScript,
+      ...(rawSubmissionConfig.appsScript || {}),
+    },
+    googleForm: {
+      ...defaultSubmissionConfig.googleForm,
+      ...sourceGoogleFormConfig,
+      fields: {
+        ...defaultSubmissionConfig.googleForm.fields,
+        ...(sourceGoogleFormConfig.fields || {}),
+      },
+    },
+  };
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -164,18 +189,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const hasPlaceholder = (value = "") =>
     value.toString().includes("REPLACE_WITH_FORM_ID");
 
+  const isHttpsUrl = (value = "") => /^https:\/\/.+/i.test(value.toString());
+
   const isEntryField = (value = "") =>
     /^entry\.\d+$/.test(value.toString());
 
+  const isAppsScriptConfigured = () =>
+    isHttpsUrl(submissionConfig.appsScript.endpointUrl) &&
+    !hasPlaceholder(submissionConfig.appsScript.endpointUrl);
+
   const isGoogleFormConfigured = () => {
     const requiredFieldNames = ["name", "author", "link", "pages", "track"];
-    const configuredFields = googleFormConfig.fields || {};
+    const configuredFields = submissionConfig.googleForm.fields || {};
 
-    if (!googleFormConfig.formResponseUrl || hasPlaceholder(googleFormConfig.formResponseUrl)) {
+    if (!submissionConfig.googleForm.formResponseUrl || hasPlaceholder(submissionConfig.googleForm.formResponseUrl)) {
       return false;
     }
 
-    if (!googleFormConfig.formResponseUrl.includes("/formResponse")) {
+    if (!submissionConfig.googleForm.formResponseUrl.includes("/formResponse")) {
       return false;
     }
 
@@ -184,8 +215,27 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   };
 
+  const getSubmissionMode = () => {
+    const requestedMode = (submissionConfig.mode || "").toLowerCase();
+
+    if (requestedMode === "apps_script" && isAppsScriptConfigured()) {
+      return "apps_script";
+    }
+    if (requestedMode === "google_form" && isGoogleFormConfigured()) {
+      return "google_form";
+    }
+    if (isAppsScriptConfigured()) {
+      return "apps_script";
+    }
+    if (isGoogleFormConfigured()) {
+      return "google_form";
+    }
+
+    return null;
+  };
+
   const submitSuggestionToGoogleForm = async (data) => {
-    const { fields } = googleFormConfig;
+    const { fields } = submissionConfig.googleForm;
     const payload = new URLSearchParams();
     payload.set(fields.name, data.name);
     payload.set(fields.author, data.author);
@@ -193,7 +243,39 @@ document.addEventListener("DOMContentLoaded", () => {
     payload.set(fields.pages, data.pages || "");
     payload.set(fields.track, trackLabels[data.track] || data.track);
 
-    await fetch(googleFormConfig.formResponseUrl, {
+    await fetch(submissionConfig.googleForm.formResponseUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: payload.toString(),
+    });
+  };
+
+  const submitSuggestionToAppsScript = async (data) => {
+    const payload = new URLSearchParams();
+    const trackLabel = trackLabels[data.track] || data.track;
+    payload.set("name", data.name);
+    payload.set("author", data.author);
+    payload.set("link", data.link);
+    payload.set("pages", data.pages || "");
+    payload.set("track", trackLabel);
+    payload.set("track_key", data.track || "");
+    payload.set("submitted_at", new Date().toISOString());
+    payload.set(
+      "payload_json",
+      JSON.stringify({
+        name: data.name,
+        author: data.author,
+        link: data.link,
+        pages: data.pages || "",
+        track: trackLabel,
+        track_key: data.track || "",
+      })
+    );
+
+    await fetch(submissionConfig.appsScript.endpointUrl, {
       method: "POST",
       mode: "no-cors",
       headers: {
@@ -212,8 +294,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      if (!isGoogleFormConfigured()) {
-        setFeedback("Suggestion form is not configured yet. Update public/suggestion-form-config.js with your Google Form IDs.");
+      const submissionMode = getSubmissionMode();
+      if (!submissionMode) {
+        setFeedback("Suggestion form is not configured yet. Update public/suggestion-form-config.js with a valid endpoint.");
         return;
       }
 
@@ -223,7 +306,11 @@ document.addEventListener("DOMContentLoaded", () => {
           suggestionSubmitButton.textContent = "Sending...";
         }
 
-        await submitSuggestionToGoogleForm(data);
+        if (submissionMode === "apps_script") {
+          await submitSuggestionToAppsScript(data);
+        } else {
+          await submitSuggestionToGoogleForm(data);
+        }
         suggestionForm.reset();
         setFeedback("Thanks! Your suggestion was sent.");
       } catch (error) {

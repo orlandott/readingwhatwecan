@@ -6,13 +6,13 @@
 
 ### Add a new book by editing the [books.js](public/books.js) file and submitting a pull request
 
-### Suggestions via Google Form
+### Suggestions submission endpoint
 
-Suggestions are submitted from the website directly to a Google Form endpoint.
+Suggestions are submitted from the website based on the config in [`public/suggestion-form-config.js`](public/suggestion-form-config.js).
 
-- Form config lives in [`public/suggestion-form-config.js`](public/suggestion-form-config.js).
-- Keep this file in git so updates to the copied form mapping are reviewable in pull requests.
-- Replace the placeholder `formViewUrl`, `formResponseUrl`, and `entry.*` field IDs with your copied form's values.
-- Use [`docs/google-form-copy.md`](docs/google-form-copy.md) as the canonical form-copy template.
+- Current default mode is an Apps Script web app endpoint writing to a Google Sheet.
+- If you use Apps Script, deploy it with public access ("Anyone") so website visitors can submit.
+- You can also switch to Google Form mode using `formResponseUrl` + `entry.*` mappings.
+- Use [`docs/google-form-copy.md`](docs/google-form-copy.md) as the canonical Google Form copy template.
 
-When the form is linked to a Google Sheet, incoming website suggestions are added there automatically.
+Keep config changes in git so submission routing is reviewable in pull requests.
