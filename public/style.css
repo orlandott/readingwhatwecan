@@ -172,6 +172,7 @@ body.site-body {
 
 .gauntlet-tabs {
   align-items: flex-start;
+  margin-bottom: 1.5rem;
 }
 
 .gauntlet-tabs-menu {
