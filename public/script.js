@@ -889,7 +889,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const nowIso = new Date().toISOString();
     const linkFromEntry = getEntryPrimaryLink(entry);
     const normalizedLink =
-      isValidHttpUrl(linkFromEntry) && isHttpsUrl(linkFromEntry)
+      isValidHttpUrl(linkFromEntry)
         ? linkFromEntry
         : existing && existing.link
           ? existing.link
