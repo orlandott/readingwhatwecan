@@ -148,6 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "AI Superpowers": 2018,
     "The Risks of Artificial Intelligence": 2023,
     "The Alignment Problem": 2020,
+    "A Brief History of Intelligence": 2024,
     "Life 3.0": 2017,
     "The Precipice (Chapter on AI)": 2020,
     "Rationality: From AI to Zombies": 2015,
@@ -200,7 +201,9 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/10678431-L.jpg",
     },
     "A Brief History of Intelligence": {
-      Image: "https://covers.openlibrary.org/b/id/13282296-L.jpg",
+      Image: "https://books.google.com/books/content?id=tymCEAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+      page_count: 561,
+      Year: 2024,
     },
     "Life 3.0": {
       Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
@@ -746,6 +749,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const yearElement = document.getElementById(ids.yearElementId);
       if (yearElement) {
         yearElement.textContent = `Year ${metadata.year}`;
+        yearElement.classList.remove("is-hidden");
       }
     }
   };
@@ -800,7 +804,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
     const pageCount = getPageCountLabel(entry);
     const yearValue = getEntryYear(entry);
-    const yearText = yearValue ? `Year ${yearValue}` : "Year unknown";
+    const yearText = yearValue ? `Year ${yearValue}` : "";
     const coverMarkup = entry.Image
       ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
       : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
@@ -817,7 +821,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ${summaryMarkup}
           <div class="book-meta">
             <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
-            <span id="${yearElementId}" class="page-pill year-pill">${yearText}</span>
+            <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
             <span id="${pageElementId}" class="page-pill">${pageCount}</span>
           </div>
         </div>
@@ -836,11 +840,11 @@ document.addEventListener("DOMContentLoaded", () => {
       typeof additional_resources !== "undefined" && Array.isArray(additional_resources)
         ? additional_resources
         : [];
-    const curatedAdditions =
-      typeof curated_resources !== "undefined" && Array.isArray(curated_resources)
-        ? curated_resources
+    const categorizedAdditions =
+      typeof categorized_resources !== "undefined" && Array.isArray(categorized_resources)
+        ? categorized_resources
         : [];
-    const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras, ...curatedAdditions];
+    const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras, ...categorizedAdditions];
     const categoryKeysFromData = {
       entry_point: new Set(),
       canon: new Set(),

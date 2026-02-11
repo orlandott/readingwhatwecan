@@ -1,4 +1,4 @@
-// Edit each list below. Rendering currently uses `first_entry`, `ml`, `ais`, `scifi`, `additional_resources`, and `curated_resources`.
+// Edit each list below. Rendering currently uses `first_entry`, `ml`, `ais`, `scifi`, `additional_resources`, and `categorized_resources`.
 let first_entry = [
   { Name: "The Coming Technological Singularity (1994)", Link: "https://ntrs.nasa.gov/api/citations/19940022856/downloads/19940022856.pdf", Author: "Vernor Vinge", page_count: 15 },
   { Name: "Preventing an AI-related catastrophe", Link: "https://80000hours.org/problem-profiles/artificial-intelligence/", Author: "Benjamin Hilton", page_count: 22 },
@@ -130,7 +130,7 @@ let additional_resources = [
   { Name: "Service Model", Link: "https://www.goodreads.com/search?q=Service+Model+Adrian+Tchaikovsky", Author: "Adrian Tchaikovsky", page_count: 0 },
 ];
 
-let curated_resources = [
+let categorized_resources = [
   { Name: "The thesis that AI safety is not a \"real\" field", Author: "Scott Alexander", Link: "https://www.google.com/search?q=Scott+Alexander+AI+safety+is+not+a+real+field", Category: "entry_point", Summary: "Scott Alexander dismantles skepticism by using historical analogies to validate the study of future risks." },
   { Name: "Without specific countermeasures, the easiest path to AGI ends in disaster", Author: "Eliezer Yudkowsky", Link: "https://www.lesswrong.com/posts/pnYtwqA8Y6N8fM3pk/pause-ai", Category: "entry_point", Summary: "Eliezer Yudkowsky provides the most concise, unvarnished argument for why default AI outcomes are likely lethal." },
   { Name: "Why AI alignment could be hard with modern deep learning", Author: "Ajeya Cotra", Link: "https://www.openphilanthropy.org/research/could-advanced-ai-drive-explosive-growth/", Category: "entry_point", Summary: "Ajeya Cotra bridges the gap for ML engineers, explaining why low training loss does not guarantee real-world safety." },
@@ -153,7 +153,7 @@ let curated_resources = [
   { Name: "Co-Intelligence", Author: "Ethan Mollick", Link: "https://www.goodreads.com/search?q=Co-Intelligence+Ethan+Mollick", Category: "entry_point", Year: 2024, Summary: "Ethan Mollick offers a practical guide for using current LLMs while understanding their jagged frontiers of capability." },
 
   { Name: "Gödel, Escher, Bach", Author: "Douglas Hofstadter", Link: "https://www.goodreads.com/search?q=Godel+Escher+Bach", Category: "canon", Year: 1979, Summary: "Douglas Hofstadter explores how consciousness and meaning can emerge from formal systems that look meaningless locally." },
-  { Name: "A Brief History of Intelligence", Author: "Max Bennett", Link: "https://www.goodreads.com/search?q=A+Brief+History+of+Intelligence", Category: "canon", Year: 2024, Summary: "Bennett traces the evolution of intelligence from biology to machines, clarifying what makes aligned cognition difficult." },
+  { Name: "A Brief History of Intelligence", Author: "Max Bennett", Link: "https://www.goodreads.com/search?q=A+Brief+History+of+Intelligence", Category: "canon", Year: 2024, page_count: 561, Image: "https://books.google.com/books/content?id=tymCEAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api", Summary: "Bennett traces the evolution of intelligence from biology to machines, clarifying what makes aligned cognition difficult." },
   { Name: "The Beginning of Infinity", Author: "David Deutsch", Link: "https://www.goodreads.com/search?q=The+Beginning+of+Infinity", Category: "canon", Year: 2011, Summary: "David Deutsch argues that knowledge creation is unbounded and that all problems are solvable in principle." },
   { Name: "Genius Makers", Author: "Cade Metz", Link: "https://www.goodreads.com/search?q=Genius+Makers", Category: "canon", Year: 2021, Summary: "Cade Metz provides the definitive history of the deep learning revolution and the people who built it." },
   { Name: "Cybernetics", Author: "Norbert Wiener", Link: "https://www.goodreads.com/search?q=Cybernetics+Norbert+Wiener", Category: "canon", Year: 1948, Summary: "Norbert Wiener founded the study of feedback and control, anticipating the governance problems of intelligent machines." },
