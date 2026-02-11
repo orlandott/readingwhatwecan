@@ -17,6 +17,19 @@ document.addEventListener("DOMContentLoaded", () => {
     scifi: "AI safety-relevant sci-fi",
   };
 
+  const defaultGoogleFormConfig = {
+    formViewUrl: "https://docs.google.com/forms/d/e/REPLACE_WITH_FORM_ID/viewform",
+    formResponseUrl: "https://docs.google.com/forms/d/e/REPLACE_WITH_FORM_ID/formResponse",
+    fields: {
+      name: "entry.1000000001",
+      author: "entry.1000000002",
+      link: "entry.1000000003",
+      pages: "entry.1000000004",
+      track: "entry.1000000005",
+    },
+  };
+  const googleFormConfig = window.RWWC_GOOGLE_FORM || defaultGoogleFormConfig;
+
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       const targetTab = tab.getAttribute("data-w-tab");
@@ -41,12 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
-
-  const escapeForJs = (value = "") =>
-    value
-      .toString()
-      .replaceAll("\\", "\\\\")
-      .replaceAll('"', '\\"');
 
   const getSourceLabel = (link = "") => {
     const normalizedLink = link.toLowerCase();
@@ -128,8 +135,10 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const suggestionForm = document.getElementById("book-suggestion-form");
-  const copySnippetButton = document.getElementById("copy-book-snippet");
   const suggestionFeedback = document.getElementById("suggestion-feedback");
+  const suggestionSubmitButton = suggestionForm
+    ? suggestionForm.querySelector('button[type="submit"]')
+    : null;
 
   const setFeedback = (message) => {
     if (suggestionFeedback) {
@@ -152,29 +161,50 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   };
 
-  const createSnippet = (data) => {
-    const normalizedPageCount = Number.isFinite(Number(data.pages)) && Number(data.pages) > 0
-      ? Number(data.pages)
-      : 0;
-    return `{ Name: "${escapeForJs(data.name)}", Link: "${escapeForJs(data.link)}", Author: "${escapeForJs(data.author)}", page_count: ${normalizedPageCount} },`;
-  };
+  const hasPlaceholder = (value = "") =>
+    value.toString().includes("REPLACE_WITH_FORM_ID");
 
-  const copyText = async (text) => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
+  const isEntryField = (value = "") =>
+    /^entry\.\d+$/.test(value.toString());
+
+  const isGoogleFormConfigured = () => {
+    const requiredFieldNames = ["name", "author", "link", "pages", "track"];
+    const configuredFields = googleFormConfig.fields || {};
+
+    if (!googleFormConfig.formResponseUrl || hasPlaceholder(googleFormConfig.formResponseUrl)) {
+      return false;
     }
 
-    const tempTextarea = document.createElement("textarea");
-    tempTextarea.value = text;
-    document.body.appendChild(tempTextarea);
-    tempTextarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(tempTextarea);
+    if (!googleFormConfig.formResponseUrl.includes("/formResponse")) {
+      return false;
+    }
+
+    return requiredFieldNames.every(
+      (fieldName) => configuredFields[fieldName] && isEntryField(configuredFields[fieldName])
+    );
+  };
+
+  const submitSuggestionToGoogleForm = async (data) => {
+    const { fields } = googleFormConfig;
+    const payload = new URLSearchParams();
+    payload.set(fields.name, data.name);
+    payload.set(fields.author, data.author);
+    payload.set(fields.link, data.link);
+    payload.set(fields.pages, data.pages || "");
+    payload.set(fields.track, trackLabels[data.track] || data.track);
+
+    await fetch(googleFormConfig.formResponseUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: payload.toString(),
+    });
   };
 
   if (suggestionForm) {
-    suggestionForm.addEventListener("submit", (event) => {
+    suggestionForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = getSuggestionValues();
       if (!data || !data.name || !data.author || !data.link) {
@@ -182,46 +212,27 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const snippet = createSnippet(data);
-      const emailSubject = `[RWWC Suggestion] ${data.name}`;
-      const emailBody = [
-        "Hi Reading What We Can team,",
-        "",
-        "I'd like to suggest a new reading option:",
-        "",
-        `- Title: ${data.name}`,
-        `- Author: ${data.author}`,
-        `- Link: ${data.link}`,
-        `- Pages: ${data.pages || "Unknown"}`,
-        `- Reading track: ${trackLabels[data.track] || trackLabels.first_entry}`,
-        "",
-        "## books.js snippet",
-        "```js",
-        snippet,
-        "```",
-        "",
-        "Thanks!",
-      ].join("\n");
-      const mailtoUrl = `mailto:esben@apartresearch.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-
-      window.location.href = mailtoUrl;
-      setFeedback("Opened your email app with a pre-filled suggestion draft.");
-    });
-  }
-
-  if (copySnippetButton) {
-    copySnippetButton.addEventListener("click", async () => {
-      const data = getSuggestionValues();
-      if (!data || !data.name || !data.author || !data.link) {
-        setFeedback("Fill out title, author, and link first to copy a valid snippet.");
+      if (!isGoogleFormConfigured()) {
+        setFeedback("Suggestion form is not configured yet. Update public/suggestion-form-config.js with your Google Form IDs.");
         return;
       }
 
       try {
-        await copyText(createSnippet(data));
-        setFeedback("Copied books.js snippet to clipboard.");
+        if (suggestionSubmitButton) {
+          suggestionSubmitButton.disabled = true;
+          suggestionSubmitButton.textContent = "Sending...";
+        }
+
+        await submitSuggestionToGoogleForm(data);
+        suggestionForm.reset();
+        setFeedback("Thanks! Your suggestion was sent.");
       } catch (error) {
-        setFeedback("Could not copy snippet automatically. You can still send the email draft.");
+        setFeedback("Unable to send suggestion right now. Please try again.");
+      } finally {
+        if (suggestionSubmitButton) {
+          suggestionSubmitButton.disabled = false;
+          suggestionSubmitButton.textContent = "Send suggestion";
+        }
       }
     });
   }

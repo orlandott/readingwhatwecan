@@ -135,8 +135,7 @@ body.site-body {
   margin-top: 0.85rem;
 }
 
-.suggestion-submit,
-.suggestion-copy-button {
+.suggestion-submit {
   border: 1px solid var(--accent);
   border-radius: 999px;
   padding: 0.55rem 0.95rem;
@@ -154,13 +153,9 @@ body.site-body {
   background: var(--accent-dark);
 }
 
-.suggestion-copy-button {
-  color: var(--accent-dark);
-  background: #fff;
-}
-
-.suggestion-copy-button:hover {
-  background: #f2faf5;
+.suggestion-submit:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 .suggestion-feedback {

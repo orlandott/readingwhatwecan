@@ -25,6 +25,7 @@
   <link href="images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
   <link href="images/webclip.ico" rel="apple-touch-icon" />
   <link href="./style.css" rel="stylesheet" type="text/css" />
+  <script src="./suggestion-form-config.js" type="text/javascript"></script>
   <script src="./script.js" type="text/javascript" defer></script>
   <script src="./books.js" type="text/javascript"></script> <!-- Use local books.js for now -->
 </head>
@@ -34,7 +35,7 @@
       <a href="index.html" class="flex items-center" aria-current="page">
         <img src="images/Group-55.png" width="209" alt="Reading What We Can Logo" class="nav-logo" />
       </a>
-      <a href="mailto:esben@apartresearch.com?subject=Reading%20what%20we%20can" class="contact-button">Contact</a>
+      <a href="mailto:esben@kran.ai?subject=Reading%20what%20we%20can" class="contact-button">Contact</a>
     </nav>
   </header>
   <div class="section-3 py-12">
@@ -46,7 +47,7 @@
         The Gauntlet is a challenge to read 20 books or articles in 20 days. Post online with
         <a href="https://twitter.com/search?q=%23rwwc" target="_blank" class="inline-link">#rwwc</a>.
         It is <strong>in development</strong> so
-        <a href="mailto:esben@apartresearch.com?subject=AI%20Gauntlet%20suggestion%3A%20" class="inline-link">write to us</a>
+        <a href="mailto:esben@kran.ai?subject=AI%20Gauntlet%20suggestion%3A%20" class="inline-link">write to us</a>
         if you would like a feature, learning path, book, or paper added to the project!
       </p>
       <a href="https://github.com/apartresearch/readingwhatwecan" class="contribute-link block text-center mb-8">Contribute by submitting a pull request</a>
@@ -54,7 +55,7 @@
         <div class="suggestion-shell">
           <div>
             <h2 class="suggestion-title">Suggest a new option</h2>
-            <p class="suggestion-copy">Share a book or article and we will draft an email suggestion for you. No GitHub account required.</p>
+            <p class="suggestion-copy">Share a book or article and we will send your suggestion to our submissions sheet.</p>
           </div>
           <form id="book-suggestion-form" class="suggestion-form">
             <div class="suggestion-grid">
@@ -67,7 +68,7 @@
                 <input id="suggestion-author" name="author" type="text" required maxlength="120" placeholder="Author name" />
               </label>
               <label class="field-label">
-                Link
+                Link (if it's a book, send us a Goodreads link)
                 <input id="suggestion-link" name="link" type="url" required placeholder="https://..." />
               </label>
               <label class="field-label">
@@ -85,8 +86,7 @@
               </label>
             </div>
             <div class="suggestion-actions">
-              <button type="submit" class="suggestion-submit">Draft email suggestion</button>
-              <button id="copy-book-snippet" type="button" class="suggestion-copy-button">Copy books.js snippet</button>
+              <button type="submit" class="suggestion-submit">Send suggestion</button>
             </div>
             <p id="suggestion-feedback" class="suggestion-feedback" aria-live="polite"></p>
           </form>
