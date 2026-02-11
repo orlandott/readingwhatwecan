@@ -248,12 +248,12 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/14674500-L.jpg",
     },
     "The Age of Em": {
-      Image: "https://covers.openlibrary.org/b/isbn/9780191069666-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1452923947i/26831944.jpg",
       page_count: 569,
       Year: 2016,
     },
     "Army of None: Autonomous Weapons and the Future of War": {
-      Image: "https://covers.openlibrary.org/b/isbn/9780393608991-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1529056546i/40180025.jpg",
       page_count: 388,
       Year: 2018,
     },
