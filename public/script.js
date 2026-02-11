@@ -20,6 +20,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const pendingMetadataLookups = new Map();
   const authorPortraitCache = new Map();
   const pendingAuthorPortraitLookups = new Map();
+  const authorPortraitCandidateCache = new Map();
+  const pendingAuthorPortraitCandidateLookups = new Map();
+  const wikidataHumanCache = new Map();
+  const pendingWikidataHumanLookups = new Map();
 
   const trackLabels = {
     entry_point: "The Entry Point (Primers & Essays)",
@@ -1268,52 +1272,211 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   };
 
-  const queryWikipediaAuthorPortrait = async (author = "") => {
-    const authorName = trimToLimit(author, 140);
-    if (!authorName) {
-      return "";
+  const authorOrganizationNameHints = [
+    "anthropic",
+    "openai",
+    "deepmind",
+    "google",
+    "team",
+    "group",
+    "institute",
+    "center",
+    "centre",
+    "research",
+    "labs",
+    "laboratory",
+    "committee",
+    "project",
+    "foundation",
+    "university",
+    "arc",
+    "et al",
+    "80,000 hours",
+  ];
+
+  const extractAuthorCandidates = (author = "") => {
+    const normalizedAuthor = trimToLimit(author, 220);
+    if (!normalizedAuthor) {
+      return [];
     }
-    const normalizedPageTitle = authorName.replaceAll(/\s+/g, "_");
-    const queryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(normalizedPageTitle)}`;
-    let response;
-    try {
-      response = await fetchWithTimeout(
-        queryUrl,
-        {},
-        metadataLookupTimeoutMs,
-        "Wikipedia author portrait lookup"
-      );
-    } catch (error) {
-      logResilienceWarning(
-        "wikipedia_author_lookup_failed",
-        { author: authorName },
-        error
-      );
+    const primaryChunk = normalizedAuthor.replaceAll(/\([^)]*\)/g, " ");
+    return primaryChunk
+      .split(/,|;|\/|&|\band\b|\bet al\.?\b/gi)
+      .map((candidate) => trimToLimit(candidate, 120))
+      .filter(Boolean)
+      .filter((candidate, index, values) => values.indexOf(candidate) === index)
+      .slice(0, 4);
+  };
+
+  const isLikelyPersonName = (name = "") => {
+    const normalizedName = trimToLimit(name, 120);
+    if (!normalizedName) {
+      return false;
+    }
+    const lowercaseName = normalizedName.toLowerCase();
+    if (authorOrganizationNameHints.some((hint) => lowercaseName.includes(hint))) {
+      return false;
+    }
+    if (/[0-9]/.test(normalizedName)) {
+      return false;
+    }
+    const tokens = normalizedName.split(/\s+/).filter(Boolean);
+    if (tokens.length < 2 || tokens.length > 5) {
+      return false;
+    }
+    return tokens.every((token) => /^[\p{L}.'-]+$/u.test(token));
+  };
+
+  const queryWikidataEntityIsHuman = async (wikibaseItem = "") => {
+    const normalizedItem = trimToLimit(wikibaseItem, 32).toUpperCase();
+    if (!/^Q\d+$/.test(normalizedItem)) {
+      return false;
+    }
+
+    if (wikidataHumanCache.has(normalizedItem)) {
+      return wikidataHumanCache.get(normalizedItem);
+    }
+
+    if (pendingWikidataHumanLookups.has(normalizedItem)) {
+      return pendingWikidataHumanLookups.get(normalizedItem);
+    }
+
+    const pendingLookup = (async () => {
+      const queryUrl = `https://www.wikidata.org/wiki/Special:EntityData/${encodeURIComponent(normalizedItem)}.json`;
+      let response;
+      try {
+        response = await fetchWithTimeout(
+          queryUrl,
+          {},
+          metadataLookupTimeoutMs,
+          "Wikidata human entity lookup"
+        );
+      } catch (error) {
+        logResilienceWarning(
+          "wikidata_entity_lookup_failed",
+          { wikibaseItem: normalizedItem },
+          error
+        );
+        wikidataHumanCache.set(normalizedItem, false);
+        pendingWikidataHumanLookups.delete(normalizedItem);
+        return false;
+      }
+
+      if (!response.ok) {
+        wikidataHumanCache.set(normalizedItem, false);
+        pendingWikidataHumanLookups.delete(normalizedItem);
+        return false;
+      }
+
+      try {
+        const payload = await response.json();
+        const entity = payload && payload.entities && payload.entities[normalizedItem];
+        const claims = entity && entity.claims;
+        const instanceOfClaims = (claims && claims.P31) || [];
+        const isHuman = instanceOfClaims.some((claim) => {
+          const value =
+            claim &&
+            claim.mainsnak &&
+            claim.mainsnak.datavalue &&
+            claim.mainsnak.datavalue.value;
+          return value && value.id === "Q5";
+        });
+        wikidataHumanCache.set(normalizedItem, isHuman);
+        pendingWikidataHumanLookups.delete(normalizedItem);
+        return isHuman;
+      } catch (error) {
+        logResilienceWarning(
+          "wikidata_entity_payload_parse_failed",
+          { wikibaseItem: normalizedItem },
+          error
+        );
+        wikidataHumanCache.set(normalizedItem, false);
+        pendingWikidataHumanLookups.delete(normalizedItem);
+        return false;
+      }
+    })();
+
+    pendingWikidataHumanLookups.set(normalizedItem, pendingLookup);
+    return pendingLookup;
+  };
+
+  const queryWikipediaAuthorPortraitCandidate = async (candidate = "") => {
+    const candidateKey = trimToLimit(candidate, 120).toLowerCase();
+    if (!candidateKey) {
       return "";
     }
 
-    if (!response.ok) {
-      return "";
+    if (authorPortraitCandidateCache.has(candidateKey)) {
+      return authorPortraitCandidateCache.get(candidateKey);
     }
 
-    try {
-      const payload = await response.json();
-      const thumbnailUrl =
-        sanitizeImageUrl((payload && payload.thumbnail && payload.thumbnail.source) || "") ||
-        sanitizeImageUrl((payload && payload.originalimage && payload.originalimage.source) || "");
-      return thumbnailUrl;
-    } catch (error) {
-      logResilienceWarning(
-        "wikipedia_author_payload_parse_failed",
-        { author: authorName },
-        error
-      );
-      return "";
+    if (pendingAuthorPortraitCandidateLookups.has(candidateKey)) {
+      return pendingAuthorPortraitCandidateLookups.get(candidateKey);
     }
+
+    const pendingLookup = (async () => {
+      const authorName = trimToLimit(candidate, 120);
+      const normalizedPageTitle = authorName.replaceAll(/\s+/g, "_");
+      const queryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(normalizedPageTitle)}`;
+      let response;
+      try {
+        response = await fetchWithTimeout(
+          queryUrl,
+          {},
+          metadataLookupTimeoutMs,
+          "Wikipedia author portrait lookup"
+        );
+      } catch (error) {
+        logResilienceWarning(
+          "wikipedia_author_lookup_failed",
+          { author: authorName },
+          error
+        );
+        authorPortraitCandidateCache.set(candidateKey, "");
+        pendingAuthorPortraitCandidateLookups.delete(candidateKey);
+        return "";
+      }
+
+      if (!response.ok) {
+        authorPortraitCandidateCache.set(candidateKey, "");
+        pendingAuthorPortraitCandidateLookups.delete(candidateKey);
+        return "";
+      }
+
+      try {
+        const payload = await response.json();
+        const thumbnailUrl =
+          sanitizeImageUrl((payload && payload.thumbnail && payload.thumbnail.source) || "") ||
+          sanitizeImageUrl((payload && payload.originalimage && payload.originalimage.source) || "");
+        const wikibaseItem = trimToLimit((payload && payload.wikibase_item) || "", 32).toUpperCase();
+        if (!thumbnailUrl || !wikibaseItem) {
+          authorPortraitCandidateCache.set(candidateKey, "");
+          pendingAuthorPortraitCandidateLookups.delete(candidateKey);
+          return "";
+        }
+        const isHumanEntity = await queryWikidataEntityIsHuman(wikibaseItem);
+        const result = isHumanEntity ? thumbnailUrl : "";
+        authorPortraitCandidateCache.set(candidateKey, result);
+        pendingAuthorPortraitCandidateLookups.delete(candidateKey);
+        return result;
+      } catch (error) {
+        logResilienceWarning(
+          "wikipedia_author_payload_parse_failed",
+          { author: authorName },
+          error
+        );
+        authorPortraitCandidateCache.set(candidateKey, "");
+        pendingAuthorPortraitCandidateLookups.delete(candidateKey);
+        return "";
+      }
+    })();
+
+    pendingAuthorPortraitCandidateLookups.set(candidateKey, pendingLookup);
+    return pendingLookup;
   };
 
   const fetchAuthorPortrait = async (author = "") => {
-    const cacheKey = trimToLimit(author, 140).toLowerCase();
+    const cacheKey = trimToLimit(author, 220).toLowerCase();
     if (!cacheKey) {
       return "";
     }
@@ -1327,7 +1490,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const pendingLookup = (async () => {
-      const portraitUrl = await queryWikipediaAuthorPortrait(author);
+      const candidates = extractAuthorCandidates(author).filter(isLikelyPersonName);
+      let portraitUrl = "";
+      for (const candidate of candidates) {
+        portraitUrl = await queryWikipediaAuthorPortraitCandidate(candidate);
+        if (portraitUrl) {
+          break;
+        }
+      }
       authorPortraitCache.set(cacheKey, portraitUrl);
       pendingAuthorPortraitLookups.delete(cacheKey);
       return portraitUrl;
@@ -1565,6 +1735,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const hydrateAuthorPortrait = async (entry, coverElementId) => {
+    try {
+      if (!entry || !entry.Author || !coverElementId) {
+        return;
+      }
+
+      const portraitUrl = await fetchAuthorPortrait(entry.Author);
+      if (!portraitUrl || entry.Image === portraitUrl) {
+        return;
+      }
+
+      entry.Image = portraitUrl;
+      const coverElement = document.getElementById(coverElementId);
+      if (!coverElement) {
+        return;
+      }
+      const safeAlt = escapeHtml(`${entry.Author || entry.Name || "Author"} portrait`);
+      coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(portraitUrl)}" loading="lazy" alt="${safeAlt}" />`;
+      wireCoverFallback(coverElementId, entry.Name || "Book");
+    } catch (error) {
+      logResilienceWarning(
+        "author_portrait_hydration_failed",
+        { name: entry && entry.Name, author: entry && entry.Author },
+        error
+      );
+    }
+  };
+
   const metadataHydrationQueue = [];
   const queuedMetadataHydrationKeys = new Set();
   let activeMetadataHydrations = 0;
@@ -1719,6 +1917,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </article>`
       );
       wireCoverFallback(coverElementId, entry.Name || "Book");
+      void hydrateAuthorPortrait(entry, coverElementId);
 
       if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
         queueMetadataHydration(entry, { coverElementId, pageElementId, yearElementId });
