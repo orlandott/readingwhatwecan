@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     speculative_fiction: "Speculative Fiction (AI-Relevant Sci-Fi)",
   };
 
-  const categoryBookNames = {
+  const baseCategoryBookNames = {
     entry_point: [
       "The AI Revolution",
       "Preventing an AI-related catastrophe",
@@ -118,6 +118,14 @@ document.addEventListener("DOMContentLoaded", () => {
       "Service Model",
     ],
   };
+  const categoryBookNames = {
+    entry_point: [...baseCategoryBookNames.entry_point],
+    canon: [...baseCategoryBookNames.canon],
+    problem_space: [...baseCategoryBookNames.problem_space],
+    technical_frontier: [...baseCategoryBookNames.technical_frontier],
+    speculative_fiction: [...baseCategoryBookNames.speculative_fiction],
+  };
+
   const categoryTargets = [
     { key: "entry_point", parentId: "entry-point-parent" },
     { key: "canon", parentId: "canon-parent" },
@@ -342,6 +350,21 @@ document.addEventListener("DOMContentLoaded", () => {
     return pageCount ? `${pageCount} pages` : "Page count unknown";
   };
 
+  const getEntrySummary = (entry) => {
+    if (!entry) {
+      return "";
+    }
+
+    const explicitSummary = (entry.Summary || entry.summary || "").toString().trim();
+    if (explicitSummary) {
+      return explicitSummary;
+    }
+
+    const link = (entry.Link || entry.Goodreads || "").toString();
+    const source = getSourceLabel(link).toLowerCase();
+    return `Useful ${source} resource for understanding AI safety risks, alignment strategies, and governance trade-offs.`;
+  };
+
   const formatRank = (index) => (index + 1 < 10 ? `0${index + 1}` : `${index + 1}`);
 
   const getFallbackInitial = (title = "") => {
@@ -549,6 +572,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const safeName = escapeHtml(entry.Name || "Untitled");
     const safeAuthor = escapeHtml(entry.Author || "Unknown author");
+    const safeSummary = escapeHtml(getEntrySummary(entry));
+    const summaryMarkup = safeSummary
+      ? `<p class="resource-summary" title="${safeSummary}">${safeSummary}</p>`
+      : "";
     const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
     const safeLink = escapeHtml(normalizedLink);
     const entryDomKey = toSafeDomId(
@@ -573,6 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="book-main">
           <h4 class="idea-header book">${safeName}</h4>
           <span class="author" title="${safeAuthor}">${safeAuthor}</span>
+          ${summaryMarkup}
           <div class="book-meta">
             <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
             <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
@@ -594,7 +622,18 @@ document.addEventListener("DOMContentLoaded", () => {
       typeof additional_resources !== "undefined" && Array.isArray(additional_resources)
         ? additional_resources
         : [];
-    const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras];
+    const curatedAdditions =
+      typeof curated_resources !== "undefined" && Array.isArray(curated_resources)
+        ? curated_resources
+        : [];
+    const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras, ...curatedAdditions];
+    const categoryNamesFromData = {
+      entry_point: [],
+      canon: [],
+      problem_space: [],
+      technical_frontier: [],
+      speculative_fiction: [],
+    };
 
     allEntries.forEach((entry) => {
       enrichEntryLinks(entry);
@@ -602,12 +641,46 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!entry.Year && inferredYear) {
         entry.Year = inferredYear;
       }
-      if (entry && entry.Name && !byName.has(entry.Name)) {
+      if (!entry || !entry.Name) {
+        return;
+      }
+
+      if (!byName.has(entry.Name)) {
         byName.set(entry.Name, entry);
+      } else {
+        const existingEntry = byName.get(entry.Name);
+        if (existingEntry) {
+          if (!existingEntry.Author && entry.Author) {
+            existingEntry.Author = entry.Author;
+          }
+          if ((!existingEntry.Link || !existingEntry.Link.trim()) && entry.Link) {
+            existingEntry.Link = entry.Link;
+          }
+          if ((!existingEntry.Image || !existingEntry.Image.trim()) && entry.Image) {
+            existingEntry.Image = entry.Image;
+          }
+          if (!normalizePositiveInteger(existingEntry.page_count) && normalizePositiveInteger(entry.page_count)) {
+            existingEntry.page_count = entry.page_count;
+          }
+          if (!existingEntry.Year && entry.Year) {
+            existingEntry.Year = entry.Year;
+          }
+          if ((!existingEntry.Summary || !existingEntry.Summary.trim()) && entry.Summary) {
+            existingEntry.Summary = entry.Summary;
+          }
+          if (!existingEntry.Category && entry.Category) {
+            existingEntry.Category = entry.Category;
+          }
+        }
+      }
+
+      const categoryKey = (entry.Category || "").toString();
+      if (categoryNamesFromData[categoryKey] && !categoryNamesFromData[categoryKey].includes(entry.Name)) {
+        categoryNamesFromData[categoryKey].push(entry.Name);
       }
     });
 
-    return byName;
+    return { byName, categoryNamesFromData };
   };
 
   const sortControl = document.getElementById("category-sort-control");
@@ -653,7 +726,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const renderAllBooks = () => {
-    const entryLookup = buildEntryLookup();
+    const { byName: entryLookup, categoryNamesFromData } = buildEntryLookup();
     const sortMode = getSortMode();
     const filterUnknownYears = shouldFilterUnknownYears();
 
@@ -664,7 +737,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       categoryParent.innerHTML = "";
 
-      const selectedEntries = (categoryBookNames[key] || [])
+      const selectedNames = [
+        ...(categoryBookNames[key] || []),
+        ...(categoryNamesFromData[key] || []),
+      ];
+      const uniqueNames = [...new Set(selectedNames)];
+      const selectedEntries = uniqueNames
         .map((name) => entryLookup.get(name))
         .filter(Boolean);
 

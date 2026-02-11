@@ -359,6 +359,17 @@ body.site-body {
   text-overflow: ellipsis;
 }
 
+.resource-summary {
+  margin: 0;
+  color: #5e564b;
+  font-size: 0.83rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .book-meta {
   display: flex;
   flex-wrap: wrap;
