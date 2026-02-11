@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const sourceLabels = [
     { match: "goodreads.com", label: "Book" },
-    { match: "amazon", label: "Amazon" },
+    { match: "amazon", label: "Book" },
     { match: ".pdf", label: "PDF" },
     { match: "lesswrong", label: "LessWrong" },
     { match: "arxiv", label: "ArXiv" },
@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     entry_point: [
       "The AI Revolution",
       "Preventing an AI-related catastrophe",
-      "The Coming Technological Singularity (1994)",
+      "The Coming Technological Singularity",
       "AGI safety from first principles",
       "Machines of Loving Grace",
       "Situational Awareness",
@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   const knownPublicationYears = {
-    "The Coming Technological Singularity (1994)": 1994,
+    "The Coming Technological Singularity": 1994,
     "Machines of Loving Grace": 2024,
     "Situational Awareness": 2024,
     "The Most Important Century": 2021,
@@ -189,6 +189,26 @@ document.addEventListener("DOMContentLoaded", () => {
     "Avogadro Corp": 2011,
     "Service Model": 2024,
   };
+  const seededEntrySummaries = {
+    "The AI Revolution":
+      "Tim Urban's long-form primer explains AI capability jumps in plain language and why rapid progress could outpace institutions.",
+    "Preventing an AI-related catastrophe":
+      "This 80,000 Hours profile maps major AGI risk arguments, key uncertainties, and practical ways newcomers can contribute.",
+    "The Coming Technological Singularity":
+      "Vinge's classic essay introduces the singularity hypothesis and argues superhuman intelligence could end reliable long-range forecasting.",
+    "AGI safety from first principles":
+      "Richard Ngo derives alignment difficulty from optimization pressure and generalization limits in modern machine learning.",
+    "Machines of Loving Grace":
+      "Amodei's essay argues transformative AI could create broad prosperity if development is paired with credible safety and governance.",
+    "Situational Awareness":
+      "Aschenbrenner outlines near-term scaling dynamics, model capability trajectories, and strategic implications for lab and state actors.",
+    "The Most Important Century":
+      "Karnofsky argues this era may be uniquely consequential because advanced AI decisions could shape civilization's entire long-term future.",
+    "Introduction to AI Safety, Ethics, and Society":
+      "Hendrycks' textbook surveys technical failures, governance constraints, and ethical trade-offs in deploying advanced AI systems.",
+    "The Risks of Artificial Intelligence":
+      "Bill Gates' essay sketches concrete social and safety risks from frontier AI while arguing for measured but proactive mitigation.",
+  };
 
   const seededEntryMetadata = {
     Superintelligence: {
@@ -201,9 +221,14 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/10678431-L.jpg",
     },
     "A Brief History of Intelligence": {
-      Image: "https://books.google.com/books/content?id=tymCEAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+      Image: "https://covers.openlibrary.org/b/isbn/9780063286368-L.jpg",
       page_count: 561,
       Year: 2024,
+    },
+    "Artificial Intelligence: A Guide for Thinking Humans": {
+      Image: "https://covers.openlibrary.org/b/isbn/9780374715236-L.jpg",
+      page_count: 209,
+      Year: 2019,
     },
     "Life 3.0": {
       Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
@@ -263,9 +288,6 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     "The Fabric of Reality": {
       Image: "https://covers.openlibrary.org/b/id/452204-L.jpg",
-    },
-    "Zero to One": {
-      Image: "https://covers.openlibrary.org/b/id/9002334-L.jpg",
     },
     "The Diamond Age": {
       Image: "https://covers.openlibrary.org/b/id/8598269-L.jpg",
@@ -504,6 +526,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (explicitSummary) {
       return explicitSummary;
     }
+    const seededSummary = (seededEntrySummaries[entry.Name] || "").toString().trim();
+    if (seededSummary) {
+      return seededSummary;
+    }
 
     const link = (entry.Link || entry.Goodreads || "").toString();
     const source = getSourceLabel(link).toLowerCase();
@@ -591,6 +617,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const toSafeDomId = (value = "") =>
     value.toString().replaceAll(/[^a-zA-Z0-9_-]/g, "-");
+
+  const wireCoverFallback = (coverElementId, fallbackTitle) => {
+    const coverContainer = document.getElementById(coverElementId);
+    if (!coverContainer) {
+      return;
+    }
+    const imageElement = coverContainer.querySelector("img.book-image");
+    if (!imageElement) {
+      return;
+    }
+    const fallbackInitial = escapeHtml(getFallbackInitial(fallbackTitle));
+    imageElement.addEventListener(
+      "error",
+      () => {
+        coverContainer.innerHTML = `<span class="cover-fallback">${fallbackInitial}</span>`;
+      },
+      { once: true }
+    );
+  };
 
   const extractOpenLibraryMetadata = (payload) => {
     const docs = payload && Array.isArray(payload.docs) ? payload.docs : [];
@@ -734,6 +779,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
         coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(metadata.coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
       }
+      wireCoverFallback(ids.coverElementId, entry.Name || "Book");
     }
 
     if (!normalizePositiveInteger(entry.page_count) && metadata.pageCount) {
@@ -748,7 +794,7 @@ document.addEventListener("DOMContentLoaded", () => {
       entry.Year = metadata.year;
       const yearElement = document.getElementById(ids.yearElementId);
       if (yearElement) {
-        yearElement.textContent = `Year ${metadata.year}`;
+        yearElement.textContent = `${metadata.year}`;
         yearElement.classList.remove("is-hidden");
       }
     }
@@ -804,7 +850,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
     const pageCount = getPageCountLabel(entry);
     const yearValue = getEntryYear(entry);
-    const yearText = yearValue ? `Year ${yearValue}` : "";
+    const yearText = yearValue ? `${yearValue}` : "";
     const coverMarkup = entry.Image
       ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
       : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
@@ -828,6 +874,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
       </a>`
     );
+    wireCoverFallback(coverElementId, entry.Name || "Book");
 
     if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
       void hydrateEntryMetadata(entry, { coverElementId, pageElementId, yearElementId });
