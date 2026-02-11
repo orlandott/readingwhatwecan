@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
   const entryMetadataCache = new Map();
   const pendingMetadataLookups = new Map();
+  const authorPortraitCache = new Map();
+  const pendingAuthorPortraitLookups = new Map();
 
   const trackLabels = {
     entry_point: "The Entry Point (Primers & Essays)",
@@ -253,6 +255,11 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/isbn/9780374715236-L.jpg",
       page_count: 209,
       Year: 2019,
+    },
+    "The Risks of Artificial Intelligence": {
+      Image:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Bill_Gates_June_2015.jpg/640px-Bill_Gates_June_2015.jpg",
+      ForceImage: true,
     },
     "Life 3.0": {
       Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
@@ -691,23 +698,126 @@ document.addEventListener("DOMContentLoaded", () => {
     return pageCount ? `${pageCount} pages` : "";
   };
 
+  const usedSummarySet = new Set();
+  const summaryReasonRules = [
+    {
+      pattern: /(alignment|misalignment|goal|corrigibility|optimization|safety)/i,
+      reason:
+        "it clarifies concrete alignment failure modes and research directions that matter for catastrophic risk reduction",
+    },
+    {
+      pattern: /(forecast|biological anchors|timeline|superforecast|century|speed limit)/i,
+      reason:
+        "it improves forecasting discipline for AGI timelines, strategic planning, and uncertainty management",
+    },
+    {
+      pattern: /(interpretability|circuits|latent|probe|representation|superposition|mechanistic)/i,
+      reason:
+        "it gives practical techniques for inspecting model internals and validating whether systems are behaving safely",
+    },
+    {
+      pattern: /(governance|policy|arms|war|international|windfall|control|openness)/i,
+      reason:
+        "it connects technical progress to governance decisions that shape global AI risk",
+    },
+    {
+      pattern: /(rlhf|preference|constitutional|assistant|debate|instruct|gophercite)/i,
+      reason:
+        "it explains how feedback-based training can improve helpfulness while reducing harmful model behavior",
+    },
+    {
+      pattern: /(scaling|gpt|chinchilla|emergent|ppo|lottery ticket|grokking|deep learning)/i,
+      reason:
+        "it highlights capability scaling dynamics that safety plans and evaluations must anticipate",
+    },
+  ];
+
+  const getSummaryReasonForEntry = (entry = {}) => {
+    const normalizedCategory = (entry.Category || "").toString();
+    if (normalizedCategory === "speculative_fiction") {
+      return "it stress-tests alignment and governance assumptions through concrete narratives about advanced AI systems";
+    }
+
+    const searchText = `${entry.Name || ""} ${entry.Author || ""}`.toLowerCase();
+    const matchedRule = summaryReasonRules.find(({ pattern }) => pattern.test(searchText));
+    if (matchedRule) {
+      return matchedRule.reason;
+    }
+
+    const sourceLabel = getSourceLabel(getEntryPrimaryLink(entry)).toLowerCase();
+    if (sourceLabel === "book") {
+      return "it builds durable mental models for forecasting, governance, and alignment under rapid capability growth";
+    }
+    if (sourceLabel === "arxiv" || sourceLabel === "pdf") {
+      return "it defines technical assumptions and evaluation targets needed for robust AI safety research";
+    }
+    return "it improves practical judgment about how to reduce severe AI failure risk";
+  };
+
+  const buildFallbackSummary = (entry = {}) => {
+    const title = trimToLimit(entry.Name || "This resource", 180);
+    const author = trimToLimit(entry.Author || "", 120);
+    const subject = author ? `${title} by ${author}` : title;
+    return `${subject} is useful for AI safety because ${getSummaryReasonForEntry(entry)}.`;
+  };
+
+  const normalizeSummaryToOneSentence = (summary = "", entry = {}) => {
+    const rawSummary = normalizeStringInput(summary || buildFallbackSummary(entry));
+    if (!rawSummary) {
+      return "";
+    }
+    const firstSentenceMatch = rawSummary.match(/[^.!?]+[.!?]?/);
+    let normalizedSummary = (firstSentenceMatch ? firstSentenceMatch[0] : rawSummary).trim();
+    if (!/(ai|alignment|safety|agi)/i.test(normalizedSummary)) {
+      const strippedSummary = normalizedSummary.replace(/[.!?]+$/, "");
+      normalizedSummary = `${strippedSummary} for understanding AI safety trade-offs.`;
+    }
+    if (!/[.!?]$/.test(normalizedSummary)) {
+      normalizedSummary += ".";
+    }
+    return normalizedSummary;
+  };
+
+  const getUniqueSummary = (entry = {}, baseSummary = "") => {
+    const normalizedBase = normalizeSummaryToOneSentence(baseSummary, entry);
+    const baseKey = normalizedBase.toLowerCase();
+    if (normalizedBase && !usedSummarySet.has(baseKey)) {
+      usedSummarySet.add(baseKey);
+      return normalizedBase;
+    }
+
+    const fallbackSummary = normalizeSummaryToOneSentence(buildFallbackSummary(entry), entry);
+    const fallbackKey = fallbackSummary.toLowerCase();
+    if (fallbackSummary && !usedSummarySet.has(fallbackKey)) {
+      usedSummarySet.add(fallbackKey);
+      return fallbackSummary;
+    }
+
+    const title = trimToLimit(entry.Name || "This resource", 180);
+    const author = trimToLimit(entry.Author || "the author", 120);
+    const forcedSummary = normalizeSummaryToOneSentence(
+      `${title} is useful for AI safety because it adds a distinct perspective from ${author} on reducing catastrophic AI risk.`,
+      entry
+    );
+    usedSummarySet.add(forcedSummary.toLowerCase());
+    return forcedSummary;
+  };
+
   const getEntrySummary = (entry) => {
     if (!entry) {
       return "";
     }
 
-    const explicitSummary = (entry.Summary || entry.summary || "").toString().trim();
-    if (explicitSummary) {
-      return explicitSummary;
-    }
-    const seededSummary = (seededEntrySummaries[entry.Name] || "").toString().trim();
-    if (seededSummary) {
-      return seededSummary;
+    if (entry.__resolvedSummary) {
+      return entry.__resolvedSummary;
     }
 
-    const link = (entry.Link || entry.Goodreads || "").toString();
-    const source = getSourceLabel(link).toLowerCase();
-    return `Useful ${source} resource for understanding AI safety risks, alignment strategies, and governance trade-offs.`;
+    const explicitSummary = (entry.Summary || entry.summary || "").toString().trim();
+    const seededSummary = (seededEntrySummaries[entry.Name] || "").toString().trim();
+    const candidateSummary = explicitSummary || seededSummary || buildFallbackSummary(entry);
+    const uniqueSummary = getUniqueSummary(entry, candidateSummary);
+    entry.__resolvedSummary = uniqueSummary;
+    return uniqueSummary;
   };
 
   const applySeededMetadata = (entry) => {
@@ -720,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if ((!entry.Image || !entry.Image.trim()) && seed.Image) {
+    if (seed.Image && (seed.ForceImage || !entry.Image || !entry.Image.trim())) {
       entry.Image = sanitizeImageUrl(seed.Image);
     }
     if (!normalizePositiveInteger(entry.page_count) && normalizePositiveInteger(seed.page_count)) {
@@ -1184,6 +1294,75 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   };
 
+  const queryWikipediaAuthorPortrait = async (author = "") => {
+    const authorName = trimToLimit(author, 140);
+    if (!authorName) {
+      return "";
+    }
+    const normalizedPageTitle = authorName.replaceAll(/\s+/g, "_");
+    const queryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(normalizedPageTitle)}`;
+    let response;
+    try {
+      response = await fetchWithTimeout(
+        queryUrl,
+        {},
+        metadataLookupTimeoutMs,
+        "Wikipedia author portrait lookup"
+      );
+    } catch (error) {
+      logResilienceWarning(
+        "wikipedia_author_lookup_failed",
+        { author: authorName },
+        error
+      );
+      return "";
+    }
+
+    if (!response.ok) {
+      return "";
+    }
+
+    try {
+      const payload = await response.json();
+      const thumbnailUrl =
+        sanitizeImageUrl((payload && payload.thumbnail && payload.thumbnail.source) || "") ||
+        sanitizeImageUrl((payload && payload.originalimage && payload.originalimage.source) || "");
+      return thumbnailUrl;
+    } catch (error) {
+      logResilienceWarning(
+        "wikipedia_author_payload_parse_failed",
+        { author: authorName },
+        error
+      );
+      return "";
+    }
+  };
+
+  const fetchAuthorPortrait = async (author = "") => {
+    const cacheKey = trimToLimit(author, 140).toLowerCase();
+    if (!cacheKey) {
+      return "";
+    }
+
+    if (authorPortraitCache.has(cacheKey)) {
+      return authorPortraitCache.get(cacheKey);
+    }
+
+    if (pendingAuthorPortraitLookups.has(cacheKey)) {
+      return pendingAuthorPortraitLookups.get(cacheKey);
+    }
+
+    const pendingLookup = (async () => {
+      const portraitUrl = await queryWikipediaAuthorPortrait(author);
+      authorPortraitCache.set(cacheKey, portraitUrl);
+      pendingAuthorPortraitLookups.delete(cacheKey);
+      return portraitUrl;
+    })();
+
+    pendingAuthorPortraitLookups.set(cacheKey, pendingLookup);
+    return pendingLookup;
+  };
+
   const queryOpenLibraryMetadata = async (entry) => {
     const title = (entry.Name || "").trim();
     const author = (entry.Author || "").trim();
@@ -1339,6 +1518,10 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!metadata.year) {
             metadata.year = normalizeYear(googleBooksMetadata.year);
           }
+        }
+
+        if (!metadata.coverUrl && entry.Author) {
+          metadata.coverUrl = await fetchAuthorPortrait(entry.Author);
         }
       } catch (error) {
         logResilienceWarning(
@@ -1888,6 +2071,12 @@ document.addEventListener("DOMContentLoaded", () => {
       entryLookup = lookupResult.byLookupKey;
       categoryKeysFromData = lookupResult.categoryKeysFromData;
       latestEntryLookup = entryLookup;
+      usedSummarySet.clear();
+      entryLookup.forEach((entry) => {
+        if (entry && entry.__resolvedSummary) {
+          delete entry.__resolvedSummary;
+        }
+      });
       syncYearFilterControls(entryLookup);
     } catch (error) {
       logResilienceError("resource_lookup_build_failed", {}, error);
