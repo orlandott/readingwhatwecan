@@ -10,8 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { match: "arxiv", label: "ArXiv" },
     { match: "docs.google", label: "Google Docs" },
   ];
-  const coverLookupCache = new Map();
-  const pendingCoverLookups = new Map();
+  const entryMetadataCache = new Map();
+  const pendingMetadataLookups = new Map();
 
   const trackLabels = {
     entry_point: "The Entry Point (Primers & Essays)",
@@ -119,6 +119,60 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
   };
 
+  const knownPublicationYears = {
+    "The Coming Technological Singularity (1994)": 1994,
+    "Machines of Loving Grace": 2024,
+    "Situational Awareness": 2024,
+    "The Most Important Century": 2021,
+    "Introduction to AI Safety, Ethics, and Society": 2025,
+    "Human Compatible": 2019,
+    "Uncontrollable: The Threat of Artificial Superintelligence": 2023,
+    "You Look Like a Thing and I Love You": 2019,
+    "Hello World: Being Human in the Age of Algorithms": 2018,
+    "AI Superpowers": 2018,
+    "The Risks of Artificial Intelligence": 2023,
+    "The Alignment Problem": 2020,
+    "Life 3.0": 2017,
+    "The Precipice (Chapter on AI)": 2020,
+    "Rationality: From AI to Zombies": 2015,
+    "Reframing Superintelligence": 2019,
+    "The Ethical Algorithm": 2019,
+    "Army of None: Autonomous Weapons and the Future of War": 2018,
+    "The Age of Spiritual Machines": 1999,
+    "Deep Learning": 2016,
+    "I, Robot": 1950,
+    "Is Power-Seeking AI an Existential Risk?": 2022,
+    "Taking AI Welfare Seriously": 2024,
+    "Gradual Disempowerment": 2025,
+    "Does AI Progress Have a Speed Limit?": 2025,
+    "The Offense-Defense Balance of Scientific Openness": 2022,
+    "Model Organisms of Misalignment": 2021,
+    "Unsolved Problems in ML Safety": 2021,
+    "Goal Misgeneralization": 2022,
+    "Specification Gaming: The Flip Side of AI Ingenuity": 2020,
+    "AI Safety via Debate": 2018,
+    "Constitutional AI: Harmlessness from AI Feedback": 2022,
+    "Weak-to-Strong Generalization": 2023,
+    "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training": 2024,
+    "Toy Models of Superposition": 2022,
+    "Red Teaming Language Models to Reduce Harms": 2022,
+    "Discovering Latent Knowledge in Language Models Without Supervision": 2022,
+    "Sparks of Artificial General Intelligence": 2023,
+    "Scaling Laws for Neural Language Models": 2020,
+    "Deep Reinforcement Learning from Human Preferences": 2017,
+    "Causal Confusion in Imitation Learning": 2019,
+    "Klara and the Sun": 2021,
+    Excession: 1996,
+    "Permutation City": 1994,
+    Accelerando: 2005,
+    "A Closed and Common Orbit": 2016,
+    "There Is No Antimemetics Division": 2021,
+    Hyperion: 1989,
+    Daemon: 2006,
+    "Avogadro Corp": 2011,
+    "Service Model": 2024,
+  };
+
   const defaultSubmissionConfig = {
     mode: "google_form",
     appsScript: {
@@ -217,6 +271,70 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const normalizePositiveInteger = (value) => {
+    const numericValue = Number.parseInt(value, 10);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+  };
+
+  const normalizeYear = (value) => {
+    const numericValue = Number.parseInt(value, 10);
+    return Number.isFinite(numericValue) && numericValue >= 1800 && numericValue <= 2100
+      ? numericValue
+      : null;
+  };
+
+  const inferYearFromTitle = (title = "") => {
+    const match = title.toString().match(/\b(18|19|20)\d{2}\b/);
+    return match ? normalizeYear(match[0]) : null;
+  };
+
+  const inferYearFromArxivLink = (link = "") => {
+    const modernMatch = link.match(/arxiv\.org\/(?:abs|pdf)\/(\d{2})(\d{2})\.\d+/i);
+    if (modernMatch) {
+      const year = 2000 + Number.parseInt(modernMatch[1], 10);
+      return normalizeYear(year);
+    }
+    return null;
+  };
+
+  const inferYearFromLink = (link = "") => {
+    const arxivYear = inferYearFromArxivLink(link);
+    if (arxivYear) {
+      return arxivYear;
+    }
+
+    const urlYearMatch = link.match(/(?:\/|=)(18|19|20)\d{2}(?:\/|[-_]|$)/);
+    return urlYearMatch ? normalizeYear(urlYearMatch[0].replaceAll(/[^0-9]/g, "")) : null;
+  };
+
+  const getEntryYear = (entry) => {
+    if (!entry) {
+      return null;
+    }
+
+    const explicitYear = normalizeYear(entry.Year);
+    if (explicitYear) {
+      return explicitYear;
+    }
+
+    const knownYear = normalizeYear(knownPublicationYears[entry.Name]);
+    if (knownYear) {
+      return knownYear;
+    }
+
+    const fromTitle = inferYearFromTitle(entry.Name || "");
+    if (fromTitle) {
+      return fromTitle;
+    }
+
+    return inferYearFromLink((entry.Link || "").trim());
+  };
+
+  const getPageCountLabel = (entry) => {
+    const pageCount = normalizePositiveInteger(entry && entry.page_count);
+    return pageCount ? `${pageCount} pages` : "Page count unknown";
+  };
+
   const formatRank = (index) => (index + 1 < 10 ? `0${index + 1}` : `${index + 1}`);
 
   const getFallbackInitial = (title = "") => {
@@ -227,34 +345,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const toSafeDomId = (value = "") =>
     value.toString().replaceAll(/[^a-zA-Z0-9_-]/g, "-");
 
-  const extractOpenLibraryCover = (payload) => {
+  const extractOpenLibraryMetadata = (payload) => {
     const docs = payload && Array.isArray(payload.docs) ? payload.docs : [];
-    const match = docs.find((doc) => doc && doc.cover_i);
-    return match ? `https://covers.openlibrary.org/b/id/${match.cover_i}-L.jpg` : "";
+    const match = docs.find((doc) => doc && (doc.cover_i || doc.number_of_pages_median || doc.first_publish_year));
+    if (!match) {
+      return { coverUrl: "", pageCount: null, year: null };
+    }
+
+    return {
+      coverUrl: match.cover_i ? `https://covers.openlibrary.org/b/id/${match.cover_i}-L.jpg` : "",
+      pageCount: normalizePositiveInteger(match.number_of_pages_median),
+      year: normalizeYear(match.first_publish_year),
+    };
   };
 
-  const queryOpenLibraryCover = async (entry) => {
+  const queryOpenLibraryMetadata = async (entry) => {
     const title = (entry.Name || "").trim();
     const author = (entry.Author || "").trim();
     if (!title) {
-      return "";
+      return { coverUrl: "", pageCount: null, year: null };
     }
 
     const queryUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}${author ? `&author=${encodeURIComponent(author)}` : ""}&limit=5`;
     const response = await fetch(queryUrl);
     if (!response.ok) {
-      return "";
+      return { coverUrl: "", pageCount: null, year: null };
     }
 
     const payload = await response.json();
-    return extractOpenLibraryCover(payload);
+    return extractOpenLibraryMetadata(payload);
   };
 
-  const queryGoogleBooksCover = async (entry) => {
+  const queryGoogleBooksMetadata = async (entry) => {
     const title = (entry.Name || "").trim();
     const author = (entry.Author || "").trim();
     if (!title) {
-      return "";
+      return { coverUrl: "", pageCount: null, year: null };
     }
 
     const queryParts = [`intitle:${title}`];
@@ -264,73 +390,111 @@ document.addEventListener("DOMContentLoaded", () => {
     const queryUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryParts.join(" "))}&maxResults=3`;
     const response = await fetch(queryUrl);
     if (!response.ok) {
-      return "";
+      return { coverUrl: "", pageCount: null, year: null };
     }
 
     const payload = await response.json();
     const items = payload && Array.isArray(payload.items) ? payload.items : [];
-    const match = items.find((item) => item && item.volumeInfo && item.volumeInfo.imageLinks);
-    if (!match || !match.volumeInfo || !match.volumeInfo.imageLinks) {
-      return "";
+    const match = items.find((item) => item && item.volumeInfo);
+    if (!match || !match.volumeInfo) {
+      return { coverUrl: "", pageCount: null, year: null };
     }
 
-    const links = match.volumeInfo.imageLinks;
+    const links = match.volumeInfo.imageLinks || {};
     const coverUrl = links.thumbnail || links.smallThumbnail || "";
-    return coverUrl ? coverUrl.replace("http://", "https://") : "";
+    const publishedDate = match.volumeInfo.publishedDate || "";
+    const publishedYearMatch = publishedDate.match(/\b(18|19|20)\d{2}\b/);
+
+    return {
+      coverUrl: coverUrl ? coverUrl.replace("http://", "https://") : "",
+      pageCount: normalizePositiveInteger(match.volumeInfo.pageCount),
+      year: publishedYearMatch ? normalizeYear(publishedYearMatch[0]) : null,
+    };
   };
 
-  const fetchCoverImageUrl = async (entry) => {
+  const fetchEntryMetadata = async (entry) => {
     const key = `${(entry.Name || "").trim().toLowerCase()}::${(entry.Author || "").trim().toLowerCase()}`;
     if (!key || key === "::") {
-      return "";
+      return { coverUrl: "", pageCount: null, year: null };
     }
 
-    if (coverLookupCache.has(key)) {
-      return coverLookupCache.get(key);
+    if (entryMetadataCache.has(key)) {
+      return entryMetadataCache.get(key);
     }
 
-    if (pendingCoverLookups.has(key)) {
-      return pendingCoverLookups.get(key);
+    if (pendingMetadataLookups.has(key)) {
+      return pendingMetadataLookups.get(key);
     }
 
     const pendingLookup = (async () => {
-      let coverUrl = "";
+      const metadata = { coverUrl: "", pageCount: null, year: null };
       try {
-        coverUrl = await queryOpenLibraryCover(entry);
-        if (!coverUrl) {
-          coverUrl = await queryGoogleBooksCover(entry);
+        const openLibraryMetadata = await queryOpenLibraryMetadata(entry);
+        metadata.coverUrl = openLibraryMetadata.coverUrl || "";
+        metadata.pageCount = normalizePositiveInteger(openLibraryMetadata.pageCount);
+        metadata.year = normalizeYear(openLibraryMetadata.year);
+
+        if (!metadata.coverUrl || !metadata.pageCount || !metadata.year) {
+          const googleBooksMetadata = await queryGoogleBooksMetadata(entry);
+          if (!metadata.coverUrl) {
+            metadata.coverUrl = googleBooksMetadata.coverUrl || "";
+          }
+          if (!metadata.pageCount) {
+            metadata.pageCount = normalizePositiveInteger(googleBooksMetadata.pageCount);
+          }
+          if (!metadata.year) {
+            metadata.year = normalizeYear(googleBooksMetadata.year);
+          }
         }
       } catch (error) {
-        coverUrl = "";
+        metadata.coverUrl = metadata.coverUrl || "";
       }
 
-      coverLookupCache.set(key, coverUrl);
-      pendingCoverLookups.delete(key);
-      return coverUrl;
+      entryMetadataCache.set(key, metadata);
+      pendingMetadataLookups.delete(key);
+      return metadata;
     })();
 
-    pendingCoverLookups.set(key, pendingLookup);
+    pendingMetadataLookups.set(key, pendingLookup);
     return pendingLookup;
   };
 
-  const hydrateCoverImage = async (entry, coverElementId) => {
-    if (!entry || entry.Image) {
+  const hydrateEntryMetadata = async (entry, ids) => {
+    if (!entry) {
       return;
     }
 
-    const coverUrl = await fetchCoverImageUrl(entry);
-    if (!coverUrl) {
+    if (entry.Image && normalizePositiveInteger(entry.page_count) && getEntryYear(entry)) {
       return;
     }
 
-    entry.Image = coverUrl;
-    const coverElement = document.getElementById(coverElementId);
-    if (!coverElement) {
-      return;
+    const metadata = await fetchEntryMetadata(entry);
+
+    if (!entry.Image && metadata.coverUrl) {
+      entry.Image = metadata.coverUrl;
+      const coverElement = document.getElementById(ids.coverElementId);
+      if (coverElement) {
+        const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
+        coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(metadata.coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
+      }
     }
 
-    const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
-    coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
+    if (!normalizePositiveInteger(entry.page_count) && metadata.pageCount) {
+      entry.page_count = metadata.pageCount;
+      const pageElement = document.getElementById(ids.pageElementId);
+      if (pageElement) {
+        pageElement.textContent = `${metadata.pageCount} pages`;
+      }
+    }
+
+    if (!getEntryYear(entry) && metadata.year) {
+      entry.Year = metadata.year;
+      const yearElement = document.getElementById(ids.yearElementId);
+      if (yearElement) {
+        yearElement.textContent = `${metadata.year}`;
+        yearElement.classList.remove("is-hidden");
+      }
+    }
   };
 
   const renderBook = (entry, target, index) => {
@@ -361,14 +525,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     enrichEntryLinks(entry);
+    const inferredYear = getEntryYear(entry);
+    if (!entry.Year && inferredYear) {
+      entry.Year = inferredYear;
+    }
+
     const safeName = escapeHtml(entry.Name || "Untitled");
     const safeAuthor = escapeHtml(entry.Author || "Unknown author");
     const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
     const safeLink = escapeHtml(normalizedLink);
     const coverElementId = `book-cover-${toSafeDomId(target)}-${index}`;
-    const pageCount = Number.isFinite(Number(entry.page_count)) && Number(entry.page_count) > 0
-      ? `${Number(entry.page_count)} pages`
-      : "Page count unknown";
+    const pageElementId = `book-pages-${toSafeDomId(target)}-${index}`;
+    const yearElementId = `book-year-${toSafeDomId(target)}-${index}`;
+    const pageCount = getPageCountLabel(entry);
+    const yearValue = getEntryYear(entry);
+    const yearText = yearValue ? `${yearValue}` : "";
     const coverMarkup = entry.Image
       ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
       : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
@@ -384,15 +555,16 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="author" title="${safeAuthor}">${safeAuthor}</span>
           <div class="book-meta">
             <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
-            <span class="page-pill">${pageCount}</span>
+            <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
+            <span id="${pageElementId}" class="page-pill">${pageCount}</span>
           </div>
         </div>
         <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
       </a>`
     );
 
-    if (!entry.Image) {
-      void hydrateCoverImage(entry, coverElementId);
+    if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
+      void hydrateEntryMetadata(entry, { coverElementId, pageElementId, yearElementId });
     }
   };
 
@@ -406,6 +578,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     allEntries.forEach((entry) => {
       enrichEntryLinks(entry);
+      const inferredYear = getEntryYear(entry);
+      if (!entry.Year && inferredYear) {
+        entry.Year = inferredYear;
+      }
       if (entry && entry.Name && !byName.has(entry.Name)) {
         byName.set(entry.Name, entry);
       }
@@ -429,10 +605,10 @@ document.addEventListener("DOMContentLoaded", () => {
         .map((name) => entryLookup.get(name))
         .filter(Boolean);
 
-      const desiredCount = Math.max(selectedEntries.length, 20);
-      for (let i = 0; i < desiredCount; i += 1) {
-        renderBook(selectedEntries[i], parentId, i);
-      }
+      selectedEntries.forEach((entry, index) => {
+        renderBook(entry, parentId, index);
+      });
+      renderBook(null, parentId, selectedEntries.length);
     });
   };
 
