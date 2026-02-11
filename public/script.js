@@ -24,11 +24,31 @@ document.addEventListener("DOMContentLoaded", () => {
       "Preventing an AI-related catastrophe",
       "The Coming Technological Singularity (1994)",
       "AGI safety from first principles",
+      "Machines of Loving Grace",
+      "Situational Awareness",
+      "The Most Important Century",
+      "Introduction to AI Safety, Ethics, and Society",
+      "Human Compatible",
+      "Uncontrollable: The Threat of Artificial Superintelligence",
+      "You Look Like a Thing and I Love You",
+      "Hello World: Being Human in the Age of Algorithms",
+      "AI Superpowers",
+      "The Risks of Artificial Intelligence",
     ],
     canon: [
       "Superintelligence",
       "The Singularity is Near",
       "The Age of Em",
+      "The Alignment Problem",
+      "Life 3.0",
+      "The Precipice (Chapter on AI)",
+      "Rationality: From AI to Zombies",
+      "Reframing Superintelligence",
+      "The Ethical Algorithm",
+      "Army of None: Autonomous Weapons and the Future of War",
+      "The Age of Spiritual Machines",
+      "Deep Learning",
+      "I, Robot",
     ],
     problem_space: [
       "Concrete problems in AI safety",
@@ -37,6 +57,16 @@ document.addEventListener("DOMContentLoaded", () => {
       "Alignment for advanced machine learning systems",
       "AI as positive and negative risk factors",
       "Risks from Learned Optimization",
+      "Is Power-Seeking AI an Existential Risk?",
+      "Taking AI Welfare Seriously",
+      "Gradual Disempowerment",
+      "Does AI Progress Have a Speed Limit?",
+      "The Offense-Defense Balance of Scientific Openness",
+      "Model Organisms of Misalignment",
+      "Unsolved Problems in ML Safety",
+      "Goal Misgeneralization",
+      "Specification Gaming: The Flip Side of AI Ingenuity",
+      "AI Safety via Debate",
     ],
     technical_frontier: [
       "The Circuits Series 0",
@@ -47,6 +77,16 @@ document.addEventListener("DOMContentLoaded", () => {
       "Instruct-GPT-3",
       "GopherCite",
       "World Models",
+      "Constitutional AI: Harmlessness from AI Feedback",
+      "Weak-to-Strong Generalization",
+      "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training",
+      "Toy Models of Superposition",
+      "Red Teaming Language Models to Reduce Harms",
+      "Discovering Latent Knowledge in Language Models Without Supervision",
+      "Sparks of Artificial General Intelligence",
+      "Scaling Laws for Neural Language Models",
+      "Deep Reinforcement Learning from Human Preferences",
+      "Causal Confusion in Imitation Learning",
     ],
     speculative_fiction: [
       "The Fable of the Dragon-Tyrant",
@@ -63,6 +103,16 @@ document.addEventListener("DOMContentLoaded", () => {
       "We Are Legion (We Are Bob)",
       "Of Ants and Dinosaurs",
       "Geometry for Ocelots",
+      "Klara and the Sun",
+      "Excession",
+      "Permutation City",
+      "Accelerando",
+      "A Closed and Common Orbit",
+      "There Is No Antimemetics Division",
+      "Hyperion",
+      "Daemon",
+      "Avogadro Corp",
+      "Service Model",
     ],
   };
 
@@ -201,7 +251,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const buildEntryLookup = () => {
     const byName = new Map();
-    const allEntries = [...first_entry, ...ml, ...ais, ...scifi];
+    const extras =
+      typeof additional_resources !== "undefined" && Array.isArray(additional_resources)
+        ? additional_resources
+        : [];
+    const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras];
 
     allEntries.forEach((entry) => {
       if (entry && entry.Name && !byName.has(entry.Name)) {
@@ -227,7 +281,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .map((name) => entryLookup.get(name))
         .filter(Boolean);
 
-      for (let i = 0; i < 20; i += 1) {
+      const desiredCount = Math.max(selectedEntries.length, 20);
+      for (let i = 0; i < desiredCount; i += 1) {
         renderBook(selectedEntries[i], parentId, i);
       }
     });

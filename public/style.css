@@ -218,6 +218,13 @@ body.site-body {
   color: var(--text);
 }
 
+.category-intro-summary {
+  margin: 0 0 0.35rem;
+  color: var(--text);
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
 .category-intro-audience {
   margin: 0;
   color: var(--muted);
