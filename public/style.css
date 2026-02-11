@@ -378,6 +378,10 @@ body.site-body {
   color: var(--muted);
 }
 
+.page-pill.is-hidden {
+  display: none;
+}
+
 .year-pill.is-hidden {
   display: none;
 }

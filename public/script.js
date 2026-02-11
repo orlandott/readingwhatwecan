@@ -52,7 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
       "Army of None: Autonomous Weapons and the Future of War",
       "The Age of Spiritual Machines",
       "Deep Learning",
-      "I, Robot",
     ],
     problem_space: [
       "Concrete problems in AI safety",
@@ -96,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "The Fable of the Dragon-Tyrant",
       "Harry Potter and the Methods of Rationality (#1 of 6)",
       "Do Androids Dream of Electric Sheep?",
+      "I, Robot",
       "The Last Question",
       "The Dark Forest (#2 of Three Body Problem)",
       "Neuromancer",
@@ -246,6 +246,16 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     "The Ethical Algorithm": {
       Image: "https://covers.openlibrary.org/b/id/14674500-L.jpg",
+    },
+    "The Age of Em": {
+      Image: "https://covers.openlibrary.org/b/isbn/9780191069666-L.jpg",
+      page_count: 569,
+      Year: 2016,
+    },
+    "Army of None: Autonomous Weapons and the Future of War": {
+      Image: "https://covers.openlibrary.org/b/isbn/9780393608991-L.jpg",
+      page_count: 388,
+      Year: 2018,
     },
     "The Age of Spiritual Machines": {
       Image: "https://covers.openlibrary.org/b/id/7343904-L.jpg",
@@ -514,7 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const getPageCountLabel = (entry) => {
     const pageCount = normalizePositiveInteger(entry && entry.page_count);
-    return pageCount ? `${pageCount} pages` : "Page count unknown";
+    return pageCount ? `${pageCount} pages` : "";
   };
 
   const getEntrySummary = (entry) => {
@@ -787,6 +797,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const pageElement = document.getElementById(ids.pageElementId);
       if (pageElement) {
         pageElement.textContent = `${metadata.pageCount} pages`;
+        pageElement.classList.remove("is-hidden");
       }
     }
 
@@ -848,7 +859,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const coverElementId = `book-cover-${toSafeDomId(target)}-${entryDomKey}`;
     const pageElementId = `book-pages-${toSafeDomId(target)}-${entryDomKey}`;
     const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
-    const pageCount = getPageCountLabel(entry);
+    const pageCountText = getPageCountLabel(entry);
     const yearValue = getEntryYear(entry);
     const yearText = yearValue ? `${yearValue}` : "";
     const coverMarkup = entry.Image
@@ -868,7 +879,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="book-meta">
             <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
             <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
-            <span id="${pageElementId}" class="page-pill">${pageCount}</span>
+            <span id="${pageElementId}" class="page-pill${pageCountText ? "" : " is-hidden"}">${pageCountText}</span>
           </div>
         </div>
         <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
