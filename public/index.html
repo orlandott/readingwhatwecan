@@ -52,52 +52,6 @@
         </span>
       </p>
       <a href="https://github.com/apartresearch/readingwhatwecan" class="contribute-link block text-center mb-8">Contribute by submitting a pull request</a>
-      <section id="suggestion-form-section" class="suggestion-section">
-        <div class="suggestion-shell">
-          <div>
-            <h2 class="suggestion-title">Suggest a new option</h2>
-            <p class="suggestion-copy">Share a book or article and we will send your suggestion to our submissions sheet.</p>
-          </div>
-          <form id="book-suggestion-form" class="suggestion-form">
-            <div class="suggestion-grid">
-              <label class="field-label">
-                Title
-                <input id="suggestion-name" name="name" type="text" required maxlength="140" placeholder="Book or article title" />
-              </label>
-              <label class="field-label">
-                Author
-                <input id="suggestion-author" name="author" type="text" required maxlength="120" placeholder="Author name" />
-              </label>
-              <label class="field-label">
-                Your email (optional, if you'd like to receive very rare updates)
-                <input id="suggestion-email" name="email" type="email" maxlength="160" placeholder="name@example.com" />
-              </label>
-              <label class="field-label">
-                Link (if it's a book, send us a Goodreads link)
-                <input id="suggestion-link" name="link" type="url" required placeholder="https://..." />
-              </label>
-              <label class="field-label">
-                Pages
-                <input id="suggestion-pages" name="pages" type="number" min="1" step="1" placeholder="Optional" />
-              </label>
-              <label class="field-label">
-                Reading track
-                <select id="suggestion-track" name="track">
-                  <option value="entry_point">The Entry Point (Primers & Essays)</option>
-                  <option value="canon">The Canon (Foundational Books)</option>
-                  <option value="problem_space">The Problem Space (Research Agendas & Concepts)</option>
-                  <option value="technical_frontier">The Technical Frontier (Mechanisms & Interpretability)</option>
-                  <option value="speculative_fiction">Speculative Fiction (AI-Relevant Sci-Fi)</option>
-                </select>
-              </label>
-            </div>
-            <div class="suggestion-actions">
-              <button type="submit" class="suggestion-submit">Send suggestion</button>
-            </div>
-            <p id="suggestion-feedback" class="suggestion-feedback" aria-live="polite"></p>
-          </form>
-        </div>
-      </section>
     </div>
     <div class="container mx-auto">
       <div class="gauntlet-tabs flex flex-col md:flex-row gap-4">
@@ -162,6 +116,54 @@
           </div>
         </div>
       </div>
+    </div>
+    <div class="container mx-auto">
+      <section id="suggestion-form-section" class="suggestion-section">
+        <div class="suggestion-shell">
+          <div>
+            <h2 class="suggestion-title">Suggest a new option</h2>
+            <p class="suggestion-copy">Share a book or article and we will send your suggestion to our submissions sheet.</p>
+          </div>
+          <form id="book-suggestion-form" class="suggestion-form">
+            <div class="suggestion-grid">
+              <label class="field-label">
+                Title
+                <input id="suggestion-name" name="name" type="text" required maxlength="140" placeholder="Book or article title" />
+              </label>
+              <label class="field-label">
+                Author
+                <input id="suggestion-author" name="author" type="text" required maxlength="120" placeholder="Author name" />
+              </label>
+              <label class="field-label">
+                Your email (optional, if you'd like to receive very rare updates)
+                <input id="suggestion-email" name="email" type="email" maxlength="160" placeholder="name@example.com" />
+              </label>
+              <label class="field-label">
+                Link (if it's a book, send us a Goodreads link)
+                <input id="suggestion-link" name="link" type="url" required placeholder="https://..." />
+              </label>
+              <label class="field-label">
+                Pages
+                <input id="suggestion-pages" name="pages" type="number" min="1" step="1" placeholder="Optional" />
+              </label>
+              <label class="field-label">
+                Reading track
+                <select id="suggestion-track" name="track">
+                  <option value="entry_point">The Entry Point (Primers & Essays)</option>
+                  <option value="canon">The Canon (Foundational Books)</option>
+                  <option value="problem_space">The Problem Space (Research Agendas & Concepts)</option>
+                  <option value="technical_frontier">The Technical Frontier (Mechanisms & Interpretability)</option>
+                  <option value="speculative_fiction">Speculative Fiction (AI-Relevant Sci-Fi)</option>
+                </select>
+              </label>
+            </div>
+            <div class="suggestion-actions">
+              <button type="submit" class="suggestion-submit">Send suggestion</button>
+            </div>
+            <p id="suggestion-feedback" class="suggestion-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
     </div>
   </div>
   <div id="ai-gauntlet" class="section-2 py-12 site-footer-note">
