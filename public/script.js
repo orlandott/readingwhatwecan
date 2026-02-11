@@ -1534,9 +1534,13 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         <article class="hypothesis book resource-card responsive w-inline-block${isSaved ? " is-saved" : ""}" data-lookup-key="${safeLookupKey}">
           <span class="book-rank">${formatRank(index)}</span>
-          <span id="${coverElementId}" class="book-cover">${coverMarkup}</span>
+          <a id="${coverElementId}" href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="book-cover resource-cover-link" aria-label="Open ${safeName}">
+            ${coverMarkup}
+          </a>
           <div class="book-main">
-            <h4 class="idea-header book">${safeName}</h4>
+            <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="resource-title-link">
+              <h4 class="idea-header book">${safeName}</h4>
+            </a>
             <span class="author" title="${safeAuthor}">${safeAuthor}</span>
             ${summaryMarkup}
             <div class="book-meta">

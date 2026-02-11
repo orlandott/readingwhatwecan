@@ -576,6 +576,15 @@ body.site-body {
   background: linear-gradient(145deg, #f7f3ea, #eee6d8);
 }
 
+.resource-cover-link {
+  display: block;
+  text-decoration: none;
+}
+
+.resource-cover-link:hover {
+  border-color: #c2b29a;
+}
+
 .book-image {
   display: block;
   width: 100%;
@@ -607,6 +616,15 @@ body.site-body {
   font-family: "Hahmlet", Georgia, serif;
   font-size: 1.04rem;
   line-height: 1.3;
+}
+
+.resource-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.resource-title-link:hover .idea-header.book {
+  text-decoration: underline;
 }
 
 .author {
