@@ -26,6 +26,16 @@ document.addEventListener("DOMContentLoaded", () => {
     technical_frontier: "The Technical Frontier (Mechanisms & Interpretability)",
     speculative_fiction: "Speculative Fiction (AI-Relevant Sci-Fi)",
   };
+  const validTrackKeys = new Set(Object.keys(trackLabels));
+  const suggestionFieldLimits = {
+    name: 140,
+    author: 120,
+    email: 160,
+    link: 2048,
+  };
+  const submissionTimeoutMs = 15000;
+  const metadataLookupTimeoutMs = 12000;
+  const metadataHydrationConcurrency = 6;
 
   const baseCategoryBookNames = {
     entry_point: [
@@ -435,10 +445,40 @@ document.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
 
-  const logResilienceWarning = (message, detail) => {
-    if (typeof console !== "undefined" && typeof console.warn === "function") {
-      console.warn(message, detail);
+  const buildErrorContext = (error) => {
+    if (!error) {
+      return null;
     }
+    const context = {
+      name: error.name || "Error",
+      message: error.message || "Unknown error",
+    };
+    if (error.stack) {
+      context.stack = error.stack;
+    }
+    return context;
+  };
+
+  const logResilienceWarning = (event, detail = {}, error = null) => {
+    if (typeof console === "undefined" || typeof console.warn !== "function") {
+      return;
+    }
+    console.warn(`[RWWC] ${event}`, {
+      ...detail,
+      error: buildErrorContext(error),
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const logResilienceError = (event, detail = {}, error = null) => {
+    if (typeof console === "undefined" || typeof console.error !== "function") {
+      return;
+    }
+    console.error(`[RWWC] ${event}`, {
+      ...detail,
+      error: buildErrorContext(error),
+      timestamp: new Date().toISOString(),
+    });
   };
 
   const getSourceLabel = (link = "") => {
@@ -487,6 +527,93 @@ document.addEventListener("DOMContentLoaded", () => {
       return url.protocol === "http:" || url.protocol === "https:";
     } catch (error) {
       return false;
+    }
+  };
+
+  const normalizeStringInput = (value = "") =>
+    value
+      .toString()
+      .replaceAll(/[\u0000-\u001F\u007F]+/g, " ")
+      .replaceAll(/\s+/g, " ")
+      .trim();
+
+  const trimToLimit = (value = "", limit = 255) =>
+    normalizeStringInput(value).slice(0, limit);
+
+  const sanitizeSuggestionInput = (rawData) => {
+    const pagesValue = trimToLimit(rawData && rawData.pages, 10);
+    const normalizedPages = normalizePositiveInteger(pagesValue);
+    return {
+      name: trimToLimit(rawData && rawData.name, suggestionFieldLimits.name),
+      author: trimToLimit(rawData && rawData.author, suggestionFieldLimits.author),
+      email: trimToLimit(rawData && rawData.email, suggestionFieldLimits.email).toLowerCase(),
+      link: trimToLimit(rawData && rawData.link, suggestionFieldLimits.link),
+      pages: normalizedPages ? `${normalizedPages}` : "",
+      track: validTrackKeys.has((rawData && rawData.track) || "")
+        ? rawData.track
+        : "entry_point",
+    };
+  };
+
+  const isValidEmail = (value = "") =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.toString().trim());
+
+  const validateSuggestionInput = (data = {}) => {
+    if (!data.name || !data.author || !data.link) {
+      return "Please fill title, author, and link before submitting.";
+    }
+    if (!isHttpsUrl(data.link) || !isValidHttpUrl(data.link)) {
+      return "Please use a valid https:// link.";
+    }
+    if (data.email && !isValidEmail(data.email)) {
+      return "Please provide a valid email or leave it blank.";
+    }
+    if (data.pages && !normalizePositiveInteger(data.pages)) {
+      return "Pages must be a positive whole number.";
+    }
+    if (normalizePositiveInteger(data.pages) > 5000) {
+      return "Pages value looks too high. Please double-check it.";
+    }
+    return "";
+  };
+
+  const sanitizeImageUrl = (value = "") => {
+    const normalized = value.toString().trim();
+    if (!normalized) {
+      return "";
+    }
+    try {
+      const imageUrl = new URL(normalized);
+      if (imageUrl.protocol === "http:") {
+        imageUrl.protocol = "https:";
+      }
+      return imageUrl.protocol === "https:" ? imageUrl.toString() : "";
+    } catch (error) {
+      return "";
+    }
+  };
+
+  const createTimeoutError = (operationName, timeoutMs) => {
+    const timeoutError = new Error(`${operationName} timed out after ${timeoutMs}ms`);
+    timeoutError.name = "TimeoutError";
+    return timeoutError;
+  };
+
+  const fetchWithTimeout = async (url, options = {}, timeoutMs = 10000, operationName = "request") => {
+    const controller = new AbortController();
+    const timerId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        throw createTimeoutError(operationName, timeoutMs);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timerId);
     }
   };
 
@@ -579,7 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if ((!entry.Image || !entry.Image.trim()) && seed.Image) {
-      entry.Image = seed.Image;
+      entry.Image = sanitizeImageUrl(seed.Image);
     }
     if (!normalizePositiveInteger(entry.page_count) && normalizePositiveInteger(seed.page_count)) {
       entry.page_count = seed.page_count;
@@ -598,6 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     enrichEntryLinks(entry);
     applySeededMetadata(entry);
+    entry.Image = sanitizeImageUrl(entry.Image || "");
     const inferredYear = getEntryYear(entry);
     if (!entry.Year && inferredYear) {
       entry.Year = inferredYear;
@@ -758,13 +886,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const queryUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}${author ? `&author=${encodeURIComponent(author)}` : ""}&limit=5`;
-    const response = await fetch(queryUrl);
+    let response;
+    try {
+      response = await fetchWithTimeout(
+        queryUrl,
+        {},
+        metadataLookupTimeoutMs,
+        "OpenLibrary metadata lookup"
+      );
+    } catch (error) {
+      logResilienceWarning(
+        "openlibrary_lookup_failed",
+        { title, author, queryUrl },
+        error
+      );
+      return { coverUrl: "", pageCount: null, year: null };
+    }
     if (!response.ok) {
+      logResilienceWarning("openlibrary_lookup_unexpected_status", {
+        title,
+        author,
+        status: response.status,
+      });
       return { coverUrl: "", pageCount: null, year: null };
     }
 
-    const payload = await response.json();
-    return extractOpenLibraryMetadata(payload);
+    try {
+      const payload = await response.json();
+      return extractOpenLibraryMetadata(payload);
+    } catch (error) {
+      logResilienceWarning(
+        "openlibrary_payload_parse_failed",
+        { title, author },
+        error
+      );
+      return { coverUrl: "", pageCount: null, year: null };
+    }
   };
 
   const queryGoogleBooksMetadata = async (entry) => {
@@ -779,12 +936,42 @@ document.addEventListener("DOMContentLoaded", () => {
       queryParts.push(`inauthor:${author}`);
     }
     const queryUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryParts.join(" "))}&maxResults=3`;
-    const response = await fetch(queryUrl);
+    let response;
+    try {
+      response = await fetchWithTimeout(
+        queryUrl,
+        {},
+        metadataLookupTimeoutMs,
+        "Google Books metadata lookup"
+      );
+    } catch (error) {
+      logResilienceWarning(
+        "google_books_lookup_failed",
+        { title, author, queryUrl },
+        error
+      );
+      return { coverUrl: "", pageCount: null, year: null };
+    }
     if (!response.ok) {
+      logResilienceWarning("google_books_lookup_unexpected_status", {
+        title,
+        author,
+        status: response.status,
+      });
       return { coverUrl: "", pageCount: null, year: null };
     }
 
-    const payload = await response.json();
+    let payload;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      logResilienceWarning(
+        "google_books_payload_parse_failed",
+        { title, author },
+        error
+      );
+      return { coverUrl: "", pageCount: null, year: null };
+    }
     const items = payload && Array.isArray(payload.items) ? payload.items : [];
     const bestVolumeInfo = items
       .map((item) => (item ? item.volumeInfo : null))
@@ -802,12 +989,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const links = bestVolumeInfo.imageLinks || {};
-    const coverUrl = links.thumbnail || links.smallThumbnail || "";
+    const coverUrl = sanitizeImageUrl(links.thumbnail || links.smallThumbnail || "");
     const publishedDate = bestVolumeInfo.publishedDate || "";
     const publishedYearMatch = publishedDate.match(/\b(18|19|20)\d{2}\b/);
 
     return {
-      coverUrl: coverUrl ? coverUrl.replace("http://", "https://") : "",
+      coverUrl,
       pageCount: normalizePositiveInteger(bestVolumeInfo.pageCount),
       year: publishedYearMatch ? normalizeYear(publishedYearMatch[0]) : null,
     };
@@ -831,14 +1018,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const metadata = { coverUrl: "", pageCount: null, year: null };
       try {
         const openLibraryMetadata = await queryOpenLibraryMetadata(entry);
-        metadata.coverUrl = openLibraryMetadata.coverUrl || "";
+        metadata.coverUrl = sanitizeImageUrl(openLibraryMetadata.coverUrl || "");
         metadata.pageCount = normalizePositiveInteger(openLibraryMetadata.pageCount);
         metadata.year = normalizeYear(openLibraryMetadata.year);
 
         if (!metadata.coverUrl || !metadata.pageCount || !metadata.year) {
           const googleBooksMetadata = await queryGoogleBooksMetadata(entry);
           if (!metadata.coverUrl) {
-            metadata.coverUrl = googleBooksMetadata.coverUrl || "";
+            metadata.coverUrl = sanitizeImageUrl(googleBooksMetadata.coverUrl || "");
           }
           if (!metadata.pageCount) {
             metadata.pageCount = normalizePositiveInteger(googleBooksMetadata.pageCount);
@@ -848,7 +1035,11 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
       } catch (error) {
-        metadata.coverUrl = metadata.coverUrl || "";
+        logResilienceWarning(
+          "metadata_lookup_failed",
+          { name: entry && entry.Name, author: entry && entry.Author },
+          error
+        );
       }
 
       entryMetadataCache.set(key, metadata);
@@ -872,12 +1063,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const metadata = await fetchEntryMetadata(entry);
 
-      if (!entry.Image && metadata.coverUrl) {
-        entry.Image = metadata.coverUrl;
+      const safeCoverUrl = sanitizeImageUrl(metadata.coverUrl);
+
+      if (!entry.Image && safeCoverUrl) {
+        entry.Image = safeCoverUrl;
         const coverElement = document.getElementById(ids.coverElementId);
         if (coverElement) {
           const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
-          coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(metadata.coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
+          coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(safeCoverUrl)}" loading="lazy" alt="${safeAlt}" />`;
         }
         wireCoverFallback(ids.coverElementId, entry.Name || "Book");
       }
@@ -901,8 +1094,58 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       // Keep rendering resilient even when metadata providers fail.
-      logResilienceWarning("Metadata hydration skipped for entry", entry && entry.Name);
+      logResilienceWarning(
+        "metadata_hydration_skipped_for_entry",
+        { name: entry && entry.Name },
+        error
+      );
     }
+  };
+
+  const metadataHydrationQueue = [];
+  const queuedMetadataHydrationKeys = new Set();
+  let activeMetadataHydrations = 0;
+
+  const getMetadataHydrationTaskKey = (ids = {}) =>
+    `${ids.coverElementId || ""}|${ids.pageElementId || ""}|${ids.yearElementId || ""}`;
+
+  const drainMetadataHydrationQueue = () => {
+    while (
+      activeMetadataHydrations < metadataHydrationConcurrency &&
+      metadataHydrationQueue.length
+    ) {
+      const nextTask = metadataHydrationQueue.shift();
+      if (!nextTask) {
+        continue;
+      }
+      activeMetadataHydrations += 1;
+      void hydrateEntryMetadata(nextTask.entry, nextTask.ids)
+        .catch((error) => {
+          logResilienceWarning(
+            "metadata_hydration_queue_task_failed",
+            { name: nextTask.entry && nextTask.entry.Name },
+            error
+          );
+        })
+        .finally(() => {
+          activeMetadataHydrations = Math.max(0, activeMetadataHydrations - 1);
+          queuedMetadataHydrationKeys.delete(nextTask.taskKey);
+          drainMetadataHydrationQueue();
+        });
+    }
+  };
+
+  const queueMetadataHydration = (entry, ids) => {
+    if (!ids || !ids.coverElementId || !ids.pageElementId || !ids.yearElementId) {
+      return;
+    }
+    const taskKey = getMetadataHydrationTaskKey(ids);
+    if (queuedMetadataHydrationKeys.has(taskKey)) {
+      return;
+    }
+    queuedMetadataHydrationKeys.add(taskKey);
+    metadataHydrationQueue.push({ entry, ids, taskKey });
+    drainMetadataHydrationQueue();
   };
 
   const renderSuggestionCard = (parent, index) => {
@@ -951,6 +1194,10 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<p class="resource-summary" title="${safeSummary}">${safeSummary}</p>`
         : "";
       const safeLink = escapeHtml(normalizedLink);
+      const safeImageUrl = sanitizeImageUrl(entry.Image || "");
+      if (entry.Image !== safeImageUrl) {
+        entry.Image = safeImageUrl;
+      }
       const entryDomKey = toSafeDomId(
         `${entry.Name || "untitled"}-${entry.Author || "unknown"}`
       );
@@ -960,14 +1207,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const pageCountText = getPageCountLabel(entry);
       const yearValue = getEntryYear(entry);
       const yearText = yearValue ? `${yearValue}` : "";
-      const coverMarkup = entry.Image
-        ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
-        : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
+      const coverMarkup = safeImageUrl
+        ? `<img class="book-image" src="${escapeHtml(safeImageUrl)}" loading="lazy" alt="${safeName} cover" />`
+        : `<span class="cover-fallback">${getFallbackInitial(entry.Name || "")}</span>`;
 
       parent.insertAdjacentHTML(
         "beforeend",
         `
-        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="hypothesis book responsive w-inline-block">
+        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="hypothesis book responsive w-inline-block">
           <span class="book-rank">${formatRank(index)}</span>
           <span id="${coverElementId}" class="book-cover">${coverMarkup}</span>
           <div class="book-main">
@@ -986,15 +1233,25 @@ document.addEventListener("DOMContentLoaded", () => {
       wireCoverFallback(coverElementId, entry.Name || "Book");
 
       if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
-        void hydrateEntryMetadata(entry, { coverElementId, pageElementId, yearElementId });
+        queueMetadataHydration(entry, { coverElementId, pageElementId, yearElementId });
       }
     } catch (error) {
-      logResilienceWarning("Skipping entry due render error", entry && entry.Name);
+      logResilienceWarning(
+        "entry_render_skipped_due_error",
+        { name: entry && entry.Name },
+        error
+      );
     }
   };
 
   const buildEntryLookup = () => {
     const byLookupKey = new Map();
+    const primaryEntries =
+      typeof first_entry !== "undefined" && Array.isArray(first_entry) ? first_entry : [];
+    const mlEntries = typeof ml !== "undefined" && Array.isArray(ml) ? ml : [];
+    const aisEntries = typeof ais !== "undefined" && Array.isArray(ais) ? ais : [];
+    const scifiEntries =
+      typeof scifi !== "undefined" && Array.isArray(scifi) ? scifi : [];
     const extras =
       typeof additional_resources !== "undefined" && Array.isArray(additional_resources)
         ? additional_resources
@@ -1003,7 +1260,22 @@ document.addEventListener("DOMContentLoaded", () => {
       typeof categorized_resources !== "undefined" && Array.isArray(categorized_resources)
         ? categorized_resources
         : [];
-    const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras, ...categorizedAdditions];
+    const allEntries = [
+      ...primaryEntries,
+      ...mlEntries,
+      ...aisEntries,
+      ...scifiEntries,
+      ...extras,
+      ...categorizedAdditions,
+    ];
+    if (!allEntries.length) {
+      logResilienceError("resource_dataset_unavailable", {
+        hasPrimaryEntries: primaryEntries.length > 0,
+        hasMlEntries: mlEntries.length > 0,
+        hasAisEntries: aisEntries.length > 0,
+        hasScifiEntries: scifiEntries.length > 0,
+      });
+    }
     const categoryKeysFromData = {
       entry_point: new Set(),
       canon: new Set(),
@@ -1043,7 +1315,11 @@ document.addEventListener("DOMContentLoaded", () => {
           categoryKeysFromData[categoryKey].add(lookupKey);
         }
       } catch (error) {
-        logResilienceWarning("Skipping entry due data error", entry && entry.Name);
+        logResilienceWarning(
+          "entry_data_skipped_due_error",
+          { name: entry && entry.Name },
+          error
+        );
       }
     });
 
@@ -1088,8 +1364,41 @@ document.addEventListener("DOMContentLoaded", () => {
     return entries;
   };
 
+  const renderCategoryFallbackState = (parent) => {
+    if (!parent) {
+      return;
+    }
+    parent.insertAdjacentHTML(
+      "beforeend",
+      `
+      <article class="resource-empty-state" role="status" aria-live="polite">
+        <h4 class="resource-empty-state-title">Resources temporarily unavailable</h4>
+        <p class="resource-empty-state-copy">We could not load this category right now. Please refresh, or suggest a resource below.</p>
+      </article>
+      `
+    );
+  };
+
   const renderAllBooks = () => {
-    const { byLookupKey: entryLookup, categoryKeysFromData } = buildEntryLookup();
+    let entryLookup;
+    let categoryKeysFromData;
+    try {
+      const lookupResult = buildEntryLookup();
+      entryLookup = lookupResult.byLookupKey;
+      categoryKeysFromData = lookupResult.categoryKeysFromData;
+    } catch (error) {
+      logResilienceError("resource_lookup_build_failed", {}, error);
+      categoryTargets.forEach(({ parentId }) => {
+        const categoryParent = document.getElementById(parentId);
+        if (!categoryParent) {
+          return;
+        }
+        categoryParent.innerHTML = "";
+        renderCategoryFallbackState(categoryParent);
+        renderBook(null, parentId, 0);
+      });
+      return;
+    }
     const sortMode = getSortMode();
 
     categoryTargets.forEach(({ key, parentId }) => {
@@ -1119,12 +1428,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const orderedEntries = sortSelectedEntries(selectedEntries, sortMode);
 
-        orderedEntries.forEach((entry, index) => {
-          renderBook(entry, parentId, index);
-        });
+        if (!orderedEntries.length) {
+          renderCategoryFallbackState(categoryParent);
+        } else {
+          orderedEntries.forEach((entry, index) => {
+            renderBook(entry, parentId, index);
+          });
+        }
         renderBook(null, parentId, orderedEntries.length);
       } catch (error) {
-        logResilienceWarning("Skipping category due render error", key);
+        logResilienceWarning(
+          "category_render_skipped_due_error",
+          { categoryKey: key },
+          error
+        );
       }
     });
   };
@@ -1217,14 +1534,31 @@ document.addEventListener("DOMContentLoaded", () => {
     payload.set(fields.pages, data.pages || "");
     payload.set(fields.track, trackLabels[data.track] || data.track);
 
-    await fetch(submissionConfig.googleForm.formResponseUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
-      body: payload.toString(),
-    });
+    try {
+      await fetchWithTimeout(
+        submissionConfig.googleForm.formResponseUrl,
+        {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          },
+          body: payload.toString(),
+        },
+        submissionTimeoutMs,
+        "Google Form suggestion submission"
+      );
+    } catch (error) {
+      logResilienceError(
+        "google_form_submission_failed",
+        {
+          track: data.track,
+          hasEmail: Boolean(data.email),
+        },
+        error
+      );
+      throw error;
+    }
   };
 
   const submitSuggestionToAppsScript = async (data) => {
@@ -1263,22 +1597,41 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     );
 
-    await fetch(submissionConfig.appsScript.endpointUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
-      body: payload.toString(),
-    });
+    try {
+      await fetchWithTimeout(
+        submissionConfig.appsScript.endpointUrl,
+        {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          },
+          body: payload.toString(),
+        },
+        submissionTimeoutMs,
+        "Apps Script suggestion submission"
+      );
+    } catch (error) {
+      logResilienceError(
+        "apps_script_submission_failed",
+        {
+          track: data.track,
+          hasEmail: Boolean(data.email),
+        },
+        error
+      );
+      throw error;
+    }
   };
 
   if (suggestionForm) {
     suggestionForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const data = getSuggestionValues();
-      if (!data || !data.name || !data.author || !data.link) {
-        setFeedback("Please fill title, author, and link before submitting.");
+      const rawData = getSuggestionValues();
+      const data = sanitizeSuggestionInput(rawData);
+      const validationError = validateSuggestionInput(data);
+      if (validationError) {
+        setFeedback(validationError);
         return;
       }
 
@@ -1302,6 +1655,14 @@ document.addEventListener("DOMContentLoaded", () => {
         suggestionForm.reset();
         setFeedback("Thanks! Your suggestion was sent.");
       } catch (error) {
+        logResilienceWarning(
+          "suggestion_submission_failed",
+          {
+            mode: submissionMode,
+            track: data.track,
+          },
+          error
+        );
         setFeedback("Unable to send suggestion right now. Please try again.");
       } finally {
         if (suggestionSubmitButton) {

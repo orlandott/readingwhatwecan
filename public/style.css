@@ -408,6 +408,28 @@ body.site-body {
   background: #f5fcf8;
 }
 
+.resource-empty-state {
+  border: 1px dashed #cebda5;
+  border-radius: 12px;
+  background: #faf7f2;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.resource-empty-state-title {
+  margin: 0 0 0.35rem;
+  font-family: "Hahmlet", Georgia, serif;
+  font-size: 0.98rem;
+  color: var(--text);
+}
+
+.resource-empty-state-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .section-3 {
   max-width: 1200px;
   margin: 0 auto;
