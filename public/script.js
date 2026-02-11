@@ -1,18 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".gauntlet-tab");
   const panes = document.querySelectorAll(".w-tab-pane");
-  const defaultResourceGuardrails = {
-    disabledTitles: [],
-    disabledLinks: [],
-  };
+  const ensureArray = (value) => (Array.isArray(value) ? value : []);
   const rawResourceGuardrails = window.RWWC_RESOURCE_GUARDRAILS || {};
   const resourceGuardrails = {
-    disabledTitles: Array.isArray(rawResourceGuardrails.disabledTitles)
-      ? rawResourceGuardrails.disabledTitles
-      : defaultResourceGuardrails.disabledTitles,
-    disabledLinks: Array.isArray(rawResourceGuardrails.disabledLinks)
-      ? rawResourceGuardrails.disabledLinks
-      : defaultResourceGuardrails.disabledLinks,
+    disabledTitles: ensureArray(rawResourceGuardrails.disabledTitles),
+    disabledLinks: ensureArray(rawResourceGuardrails.disabledLinks),
   };
 
   const sourceLabels = [
@@ -442,6 +435,12 @@ document.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
 
+  const logResilienceWarning = (message, detail) => {
+    if (typeof console !== "undefined" && typeof console.warn === "function") {
+      console.warn(message, detail);
+    }
+  };
+
   const getSourceLabel = (link = "") => {
     const normalizedLink = link.toLowerCase();
     const found = sourceLabels.find(({ match }) => normalizedLink.includes(match));
@@ -590,6 +589,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const getEntryPrimaryLink = (entry = {}) =>
+    (entry.Link || entry.Goodreads || "").toString().trim();
+
+  const prepareEntryForRender = (entry) => {
+    if (!entry) {
+      return;
+    }
+    enrichEntryLinks(entry);
+    applySeededMetadata(entry);
+    const inferredYear = getEntryYear(entry);
+    if (!entry.Year && inferredYear) {
+      entry.Year = inferredYear;
+    }
+  };
+
+  const mergeEntryData = (primaryEntry, secondaryEntry) => {
+    if (!primaryEntry || !secondaryEntry) {
+      return primaryEntry;
+    }
+
+    const mergeableTextFields = ["Author", "Link", "Image", "Summary", "Category", "Goodreads"];
+    mergeableTextFields.forEach((field) => {
+      const primaryValue = (primaryEntry[field] || "").toString().trim();
+      const secondaryValue = (secondaryEntry[field] || "").toString().trim();
+      if (!primaryValue && secondaryValue) {
+        primaryEntry[field] = secondaryEntry[field];
+      }
+    });
+
+    if (!normalizePositiveInteger(primaryEntry.page_count) && normalizePositiveInteger(secondaryEntry.page_count)) {
+      primaryEntry.page_count = secondaryEntry.page_count;
+    }
+
+    if (!getEntryYear(primaryEntry)) {
+      const secondaryYear = getEntryYear(secondaryEntry);
+      if (secondaryYear) {
+        primaryEntry.Year = secondaryYear;
+      }
+    }
+
+    return primaryEntry;
+  };
+
   const normalizeTitleForLookup = (title = "") =>
     title
       .toString()
@@ -631,7 +673,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (lookupKey && disabledTitleKeys.has(lookupKey)) {
       return true;
     }
-    const entryLink = (entry.Link || entry.Goodreads || "").toString().trim();
+    const entryLink = getEntryPrimaryLink(entry);
     if (!entryLink || !isValidHttpUrl(entryLink)) {
       return true;
     }
@@ -859,8 +901,28 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       // Keep rendering resilient even when metadata providers fail.
-      console.warn("Metadata hydration skipped for entry", entry && entry.Name);
+      logResilienceWarning("Metadata hydration skipped for entry", entry && entry.Name);
     }
+  };
+
+  const renderSuggestionCard = (parent, index) => {
+    parent.insertAdjacentHTML(
+      "beforeend",
+      `
+      <a href="#suggestion-form-section" class="hypothesis book suggestion-card responsive w-inline-block">
+        <span class="book-rank">${formatRank(index)}</span>
+        <span class="book-cover"><span class="cover-fallback">+</span></span>
+        <div class="book-main">
+          <h4 class="idea-header book">Suggest a title for this slot</h4>
+          <span class="author">Use the quick form above</span>
+          <div class="book-meta">
+            <span class="source-pill">Community</span>
+            <span class="page-pill">Open suggestion</span>
+          </div>
+        </div>
+        <span class="open-link">Suggest <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
+      </a>`
+    );
   };
 
   const renderBook = (entry, target, index) => {
@@ -871,34 +933,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (!entry) {
-        parent.insertAdjacentHTML(
-          "beforeend",
-          `
-          <a href="#suggestion-form-section" class="hypothesis book suggestion-card responsive w-inline-block">
-            <span class="book-rank">${formatRank(index)}</span>
-            <span class="book-cover"><span class="cover-fallback">+</span></span>
-            <div class="book-main">
-              <h4 class="idea-header book">Suggest a title for this slot</h4>
-              <span class="author">Use the quick form above</span>
-              <div class="book-meta">
-                <span class="source-pill">Community</span>
-                <span class="page-pill">Open suggestion</span>
-              </div>
-            </div>
-            <span class="open-link">Suggest <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
-          </a>`
-        );
+        renderSuggestionCard(parent, index);
         return;
       }
 
-      enrichEntryLinks(entry);
-      applySeededMetadata(entry);
-      const inferredYear = getEntryYear(entry);
-      if (!entry.Year && inferredYear) {
-        entry.Year = inferredYear;
-      }
+      prepareEntryForRender(entry);
 
-      const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
+      const normalizedLink = getEntryPrimaryLink(entry);
       if (!isValidHttpUrl(normalizedLink)) {
         return;
       }
@@ -948,7 +989,7 @@ document.addEventListener("DOMContentLoaded", () => {
         void hydrateEntryMetadata(entry, { coverElementId, pageElementId, yearElementId });
       }
     } catch (error) {
-      console.warn("Skipping entry due render error", entry && entry.Name);
+      logResilienceWarning("Skipping entry due render error", entry && entry.Name);
     }
   };
 
@@ -977,12 +1018,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        enrichEntryLinks(entry);
-        applySeededMetadata(entry);
-        const inferredYear = getEntryYear(entry);
-        if (!entry.Year && inferredYear) {
-          entry.Year = inferredYear;
-        }
+        prepareEntryForRender(entry);
         const lookupKey = getTitleLookupKey(entry.Name);
         if (!lookupKey || isEntryDisabledByGuardrails(entry, lookupKey)) {
           return;
@@ -998,32 +1034,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const primaryEntry = shouldSwapPrimary ? entry : existingEntry;
             const secondaryEntry = shouldSwapPrimary ? existingEntry : entry;
 
-            if (!primaryEntry.Author && secondaryEntry.Author) {
-              primaryEntry.Author = secondaryEntry.Author;
-            }
-            if ((!primaryEntry.Link || !primaryEntry.Link.trim()) && secondaryEntry.Link) {
-              primaryEntry.Link = secondaryEntry.Link;
-            }
-            if ((!primaryEntry.Image || !primaryEntry.Image.trim()) && secondaryEntry.Image) {
-              primaryEntry.Image = secondaryEntry.Image;
-            }
-            if (!normalizePositiveInteger(primaryEntry.page_count) && normalizePositiveInteger(secondaryEntry.page_count)) {
-              primaryEntry.page_count = secondaryEntry.page_count;
-            }
-            if (!primaryEntry.Year && secondaryEntry.Year) {
-              primaryEntry.Year = secondaryEntry.Year;
-            }
-            if ((!primaryEntry.Summary || !primaryEntry.Summary.trim()) && secondaryEntry.Summary) {
-              primaryEntry.Summary = secondaryEntry.Summary;
-            }
-            if (!primaryEntry.Category && secondaryEntry.Category) {
-              primaryEntry.Category = secondaryEntry.Category;
-            }
-            if (!primaryEntry.Goodreads && secondaryEntry.Goodreads) {
-              primaryEntry.Goodreads = secondaryEntry.Goodreads;
-            }
-
-            byLookupKey.set(lookupKey, primaryEntry);
+            byLookupKey.set(lookupKey, mergeEntryData(primaryEntry, secondaryEntry));
           }
         }
 
@@ -1032,7 +1043,7 @@ document.addEventListener("DOMContentLoaded", () => {
           categoryKeysFromData[categoryKey].add(lookupKey);
         }
       } catch (error) {
-        console.warn("Skipping entry due data error", entry && entry.Name);
+        logResilienceWarning("Skipping entry due data error", entry && entry.Name);
       }
     });
 
@@ -1113,7 +1124,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         renderBook(null, parentId, orderedEntries.length);
       } catch (error) {
-        console.warn("Skipping category due render error", key);
+        logResilienceWarning("Skipping category due render error", key);
       }
     });
   };
