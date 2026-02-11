@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "The Singularity is Near",
       "The Age of Em",
       "The Alignment Problem",
+      "A Brief History of Intelligence",
       "Life 3.0",
       "The Precipice (Chapter on AI)",
       "Rationality: From AI to Zombies",
@@ -186,6 +187,147 @@ document.addEventListener("DOMContentLoaded", () => {
     Daemon: 2006,
     "Avogadro Corp": 2011,
     "Service Model": 2024,
+  };
+
+  const seededEntryMetadata = {
+    Superintelligence: {
+      Image: "https://covers.openlibrary.org/b/id/8039542-L.jpg",
+    },
+    "The Singularity is Near": {
+      Image: "https://covers.openlibrary.org/b/id/400518-L.jpg",
+    },
+    "The Alignment Problem": {
+      Image: "https://covers.openlibrary.org/b/id/10678431-L.jpg",
+    },
+    "A Brief History of Intelligence": {
+      Image: "https://covers.openlibrary.org/b/id/13282296-L.jpg",
+    },
+    "Life 3.0": {
+      Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
+    },
+    "The Precipice (Chapter on AI)": {
+      Image: "https://covers.openlibrary.org/b/id/9338949-L.jpg",
+    },
+    "Rationality: From AI to Zombies": {
+      Image: "https://books.google.com/books/content?id=9Zlx0WWuTj8C&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+      page_count: 238,
+    },
+    "Reframing Superintelligence": {
+      Image: "https://books.google.com/books/content?id=eRcmrgEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      page_count: 227,
+    },
+    "The Ethical Algorithm": {
+      Image: "https://covers.openlibrary.org/b/id/14674500-L.jpg",
+    },
+    "The Age of Spiritual Machines": {
+      Image: "https://covers.openlibrary.org/b/id/7343904-L.jpg",
+    },
+    "Deep Learning": {
+      Image: "https://covers.openlibrary.org/b/id/8086288-L.jpg",
+    },
+    "I, Robot": {
+      Image: "https://covers.openlibrary.org/b/id/752299-L.jpg",
+    },
+    "Gödel, Escher, Bach": {
+      Image: "https://covers.openlibrary.org/b/id/14368453-L.jpg",
+    },
+    "The Beginning of Infinity": {
+      Image: "https://covers.openlibrary.org/b/id/8622269-L.jpg",
+    },
+    "Genius Makers": {
+      Image: "https://covers.openlibrary.org/b/id/10708874-L.jpg",
+    },
+    Cybernetics: {
+      Image: "https://covers.openlibrary.org/b/id/14428293-L.jpg",
+    },
+    "Computing Machinery and Intelligence": {
+      Image: "https://covers.openlibrary.org/b/id/14196301-L.jpg",
+    },
+    "Mind Children": {
+      Image: "https://covers.openlibrary.org/b/id/9315107-L.jpg",
+    },
+    "The Society of Mind": {
+      Image: "https://covers.openlibrary.org/b/id/4170566-L.jpg",
+    },
+    "On Intelligence": {
+      Image: "https://covers.openlibrary.org/b/id/8731272-L.jpg",
+    },
+    "Homo Deus": {
+      Image: "https://covers.openlibrary.org/b/id/14421556-L.jpg",
+    },
+    "Enlightenment Now": {
+      Image: "https://covers.openlibrary.org/b/id/8147013-L.jpg",
+    },
+    "The Fabric of Reality": {
+      Image: "https://covers.openlibrary.org/b/id/452204-L.jpg",
+    },
+    "Zero to One": {
+      Image: "https://covers.openlibrary.org/b/id/9002334-L.jpg",
+    },
+    "The Diamond Age": {
+      Image: "https://covers.openlibrary.org/b/id/8598269-L.jpg",
+    },
+    "Snow Crash": {
+      Image: "https://covers.openlibrary.org/b/id/392508-L.jpg",
+    },
+    "Simulation and Simulacra": {
+      Image: "https://covers.openlibrary.org/b/id/307858-L.jpg",
+    },
+    "Finite and Infinite Games": {
+      Image: "https://covers.openlibrary.org/b/id/6609213-L.jpg",
+    },
+    "Complexity: A Guided Tour": {
+      Image: "https://covers.openlibrary.org/b/id/6378519-L.jpg",
+    },
+    "Out of Control": {
+      Image: "https://covers.openlibrary.org/b/id/9242841-L.jpg",
+    },
+    "Whole Earth Discipline": {
+      Image: "https://covers.openlibrary.org/b/id/11744008-L.jpg",
+    },
+    "Profiles of the Future": {
+      Image: "https://covers.openlibrary.org/b/id/380579-L.jpg",
+    },
+    "Klara and the Sun": {
+      Image: "https://covers.openlibrary.org/b/id/10648686-L.jpg",
+      page_count: 321,
+    },
+    Excession: {
+      Image: "https://covers.openlibrary.org/b/id/5276044-L.jpg",
+      page_count: 470,
+    },
+    "Permutation City": {
+      Image: "https://covers.openlibrary.org/b/id/1000639-L.jpg",
+      page_count: 290,
+    },
+    Accelerando: {
+      Image: "https://covers.openlibrary.org/b/id/284259-L.jpg",
+      page_count: 596,
+    },
+    "A Closed and Common Orbit": {
+      Image: "https://covers.openlibrary.org/b/id/8211950-L.jpg",
+      page_count: 303,
+    },
+    "There Is No Antimemetics Division": {
+      Image: "https://covers.openlibrary.org/b/id/11457905-L.jpg",
+      page_count: 289,
+    },
+    Hyperion: {
+      Image: "https://covers.openlibrary.org/b/id/380332-L.jpg",
+      page_count: 532,
+    },
+    Daemon: {
+      Image: "https://covers.openlibrary.org/b/id/6404884-L.jpg",
+      page_count: 482,
+    },
+    "Avogadro Corp": {
+      Image: "https://covers.openlibrary.org/b/id/7246548-L.jpg",
+      page_count: 266,
+    },
+    "Service Model": {
+      Image: "https://covers.openlibrary.org/b/id/15061573-L.jpg",
+      page_count: 293,
+    },
   };
 
   const defaultSubmissionConfig = {
@@ -363,6 +505,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const link = (entry.Link || entry.Goodreads || "").toString();
     const source = getSourceLabel(link).toLowerCase();
     return `Useful ${source} resource for understanding AI safety risks, alignment strategies, and governance trade-offs.`;
+  };
+
+  const applySeededMetadata = (entry) => {
+    if (!entry || !entry.Name) {
+      return;
+    }
+
+    const seed = seededEntryMetadata[entry.Name];
+    if (!seed) {
+      return;
+    }
+
+    if ((!entry.Image || !entry.Image.trim()) && seed.Image) {
+      entry.Image = seed.Image;
+    }
+    if (!normalizePositiveInteger(entry.page_count) && normalizePositiveInteger(seed.page_count)) {
+      entry.page_count = seed.page_count;
+    }
+    if (!entry.Year && normalizeYear(seed.Year)) {
+      entry.Year = normalizeYear(seed.Year);
+    }
   };
 
   const normalizeTitleForLookup = (title = "") =>
@@ -582,8 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
       entry.Year = metadata.year;
       const yearElement = document.getElementById(ids.yearElementId);
       if (yearElement) {
-        yearElement.textContent = `${metadata.year}`;
-        yearElement.classList.remove("is-hidden");
+        yearElement.textContent = `Year ${metadata.year}`;
       }
     }
   };
@@ -616,6 +778,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     enrichEntryLinks(entry);
+    applySeededMetadata(entry);
     const inferredYear = getEntryYear(entry);
     if (!entry.Year && inferredYear) {
       entry.Year = inferredYear;
@@ -637,7 +800,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
     const pageCount = getPageCountLabel(entry);
     const yearValue = getEntryYear(entry);
-    const yearText = yearValue ? `${yearValue}` : "";
+    const yearText = yearValue ? `Year ${yearValue}` : "Year unknown";
     const coverMarkup = entry.Image
       ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
       : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
@@ -654,7 +817,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ${summaryMarkup}
           <div class="book-meta">
             <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
-            <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
+            <span id="${yearElementId}" class="page-pill year-pill">${yearText}</span>
             <span id="${pageElementId}" class="page-pill">${pageCount}</span>
           </div>
         </div>
@@ -692,6 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       enrichEntryLinks(entry);
+      applySeededMetadata(entry);
       const inferredYear = getEntryYear(entry);
       if (!entry.Year && inferredYear) {
         entry.Year = inferredYear;
@@ -750,12 +914,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const sortControl = document.getElementById("category-sort-control");
-  const yearKnownOnlyToggle = document.getElementById("category-year-known-only");
 
   const getSortMode = () => (sortControl && sortControl.value) || "curated";
-
-  const shouldFilterUnknownYears = () =>
-    Boolean(yearKnownOnlyToggle && yearKnownOnlyToggle.checked);
 
   const compareEntriesByYearAsc = (left, right) => {
     const leftYear = getEntryYear(left);
@@ -794,7 +954,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const renderAllBooks = () => {
     const { byLookupKey: entryLookup, categoryKeysFromData } = buildEntryLookup();
     const sortMode = getSortMode();
-    const filterUnknownYears = shouldFilterUnknownYears();
 
     categoryTargets.forEach(({ key, parentId }) => {
       const categoryParent = document.getElementById(parentId);
@@ -820,10 +979,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .map((lookupKey) => entryLookup.get(lookupKey))
         .filter(Boolean);
 
-      const filteredEntries = filterUnknownYears
-        ? selectedEntries.filter((entry) => Number.isFinite(getEntryYear(entry)))
-        : selectedEntries;
-      const orderedEntries = sortSelectedEntries(filteredEntries, sortMode);
+      const orderedEntries = sortSelectedEntries(selectedEntries, sortMode);
 
       orderedEntries.forEach((entry, index) => {
         renderBook(entry, parentId, index);
@@ -1009,12 +1165,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (sortControl) {
     sortControl.addEventListener("change", () => {
-      renderAllBooks();
-    });
-  }
-
-  if (yearKnownOnlyToggle) {
-    yearKnownOnlyToggle.addEventListener("change", () => {
       renderAllBooks();
     });
   }

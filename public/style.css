@@ -61,6 +61,11 @@ body.site-body {
   color: var(--muted);
 }
 
+.hero-contact-line {
+  display: block;
+  margin-top: 0.35rem;
+}
+
 .inline-link,
 .contribute-link {
   color: #00635d;
@@ -233,19 +238,6 @@ body.site-body {
   background: #fff;
 }
 
-.category-control-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 600;
-}
-
-.category-control-toggle input {
-  accent-color: var(--accent);
-}
-
 .category-intro {
   margin-bottom: 0.9rem;
   padding: 0.9rem 1rem;
@@ -384,10 +376,6 @@ body.site-body {
   padding: 0.2rem 0.55rem;
   font-size: 0.74rem;
   color: var(--muted);
-}
-
-.year-pill.is-hidden {
-  display: none;
 }
 
 .open-link {
