@@ -78,10 +78,11 @@
               <label class="field-label">
                 Reading track
                 <select id="suggestion-track" name="track">
-                  <option value="first_entry">AI safety basics</option>
-                  <option value="ml">ML engineering & AI safety</option>
-                  <option value="ais">ML upskilling</option>
-                  <option value="scifi">AI safety-relevant sci-fi</option>
+                  <option value="entry_point">The Entry Point (Primers & Essays)</option>
+                  <option value="canon">The Canon (Foundational Books)</option>
+                  <option value="problem_space">The Problem Space (Research Agendas & Concepts)</option>
+                  <option value="technical_frontier">The Technical Frontier (Mechanisms & Interpretability)</option>
+                  <option value="speculative_fiction">Speculative Fiction (AI-Relevant Sci-Fi)</option>
                 </select>
               </label>
             </div>
@@ -96,23 +97,27 @@
     <div class="container mx-auto">
       <div class="gauntlet-tabs flex flex-col md:flex-row gap-4">
         <div class="gauntlet-tabs-menu w-full md:w-1/4">
-          <a data-w-tab="I am a beginner in AI safety" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition w--current">AI safety basics</a>
-          <a data-w-tab="I come from ML engineering" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">ML engineering & AI safety</a>
-          <a data-w-tab="I come from AI safety and want to upskill in ML" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">ML upskilling</a>
-          <a data-w-tab="Sci-fi" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">AI safety-relevant sci-fi</a>
+          <a data-w-tab="entry-point" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition w--current">The Entry Point</a>
+          <a data-w-tab="canon" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Canon</a>
+          <a data-w-tab="problem-space" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Problem Space</a>
+          <a data-w-tab="technical-frontier" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Technical Frontier</a>
+          <a data-w-tab="speculative-fiction" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">Speculative Fiction</a>
         </div>
         <div class="w-tab-content w-full md:w-3/4">
-          <div data-w-tab="I am a beginner in AI safety" class="w-tab-pane w--tab-active">
-            <div id="beginner-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="entry-point" class="w-tab-pane w--tab-active">
+            <div id="entry-point-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
-          <div data-w-tab="I come from ML engineering" class="w-tab-pane">
-            <div id="ml-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="canon" class="w-tab-pane">
+            <div id="canon-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
-          <div data-w-tab="I come from AI safety and want to upskill in ML" class="w-tab-pane">
-            <div id="aisafety-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="problem-space" class="w-tab-pane">
+            <div id="problem-space-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
-          <div data-w-tab="Sci-fi" class="w-tab-pane">
-            <div id="scifi-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="technical-frontier" class="w-tab-pane">
+            <div id="technical-frontier-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+          <div data-w-tab="speculative-fiction" class="w-tab-pane">
+            <div id="speculative-fiction-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
         </div>
       </div>

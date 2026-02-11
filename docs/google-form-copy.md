@@ -9,10 +9,11 @@ Use this template when creating a copy of the suggestion form so the website can
 3. **Link** (Short answer, required)
 4. **Pages** (Short answer or number, optional)
 5. **Reading track** (Dropdown, required) with exact options:
-   - AI safety basics
-   - ML engineering & AI safety
-   - ML upskilling
-   - AI safety-relevant sci-fi
+   - The Entry Point (Primers & Essays)
+   - The Canon (Foundational Books)
+   - The Problem Space (Research Agendas & Concepts)
+   - The Technical Frontier (Mechanisms & Interpretability)
+   - Speculative Fiction (AI-Relevant Sci-Fi)
 
 ## Connect the copy to the website
 

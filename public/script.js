@@ -11,10 +11,59 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   const trackLabels = {
-    first_entry: "AI safety basics",
-    ml: "ML engineering & AI safety",
-    ais: "ML upskilling",
-    scifi: "AI safety-relevant sci-fi",
+    entry_point: "The Entry Point (Primers & Essays)",
+    canon: "The Canon (Foundational Books)",
+    problem_space: "The Problem Space (Research Agendas & Concepts)",
+    technical_frontier: "The Technical Frontier (Mechanisms & Interpretability)",
+    speculative_fiction: "Speculative Fiction (AI-Relevant Sci-Fi)",
+  };
+
+  const categoryBookNames = {
+    entry_point: [
+      "The AI Revolution",
+      "Preventing an AI-related catastrophe",
+      "The Coming Technological Singularity (1994)",
+      "AGI safety from first principles",
+    ],
+    canon: [
+      "Superintelligence",
+      "The Singularity is Near",
+      "The Age of Em",
+    ],
+    problem_space: [
+      "Concrete problems in AI safety",
+      "Research agenda for AI alignment",
+      "Research priorities for robust and beneficial AI",
+      "Alignment for advanced machine learning systems",
+      "AI as positive and negative risk factors",
+      "Risks from Learned Optimization",
+    ],
+    technical_frontier: [
+      "The Circuits Series 0",
+      "The Circuits Series 1",
+      "The Circuits Series 2",
+      "Eliciting Latent Knowledge",
+      "Training a Helpful and Harmless Assistant with RLHF",
+      "Instruct-GPT-3",
+      "GopherCite",
+      "World Models",
+    ],
+    speculative_fiction: [
+      "The Fable of the Dragon-Tyrant",
+      "Harry Potter and the Methods of Rationality (#1 of 6)",
+      "Do Androids Dream of Electric Sheep?",
+      "The Last Question",
+      "The Dark Forest (#2 of Three Body Problem)",
+      "Neuromancer",
+      "Crystal Society trilogy: Inside the mind of an AI",
+      "Virtua",
+      "Logic Beach",
+      "Flatland: A Romance of Many Dimensions",
+      "The Bridge to Lucy Dunne",
+      "We Are Legion (We Are Bob)",
+      "Of Ants and Dinosaurs",
+      "Geometry for Ocelots",
+    ],
   };
 
   const defaultSubmissionConfig = {
@@ -150,13 +199,38 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   };
 
+  const buildEntryLookup = () => {
+    const byName = new Map();
+    const allEntries = [...first_entry, ...ml, ...ais, ...scifi];
+
+    allEntries.forEach((entry) => {
+      if (entry && entry.Name && !byName.has(entry.Name)) {
+        byName.set(entry.Name, entry);
+      }
+    });
+
+    return byName;
+  };
+
   const renderAllBooks = () => {
-    for (let i = 0; i < 20; i += 1) {
-      renderBook(first_entry[i], "beginner-parent", i);
-      renderBook(ml[i], "ml-parent", i);
-      renderBook(ais[i], "aisafety-parent", i);
-      renderBook(scifi[i], "scifi-parent", i);
-    }
+    const entryLookup = buildEntryLookup();
+    const categoryTargets = [
+      { key: "entry_point", parentId: "entry-point-parent" },
+      { key: "canon", parentId: "canon-parent" },
+      { key: "problem_space", parentId: "problem-space-parent" },
+      { key: "technical_frontier", parentId: "technical-frontier-parent" },
+      { key: "speculative_fiction", parentId: "speculative-fiction-parent" },
+    ];
+
+    categoryTargets.forEach(({ key, parentId }) => {
+      const selectedEntries = (categoryBookNames[key] || [])
+        .map((name) => entryLookup.get(name))
+        .filter(Boolean);
+
+      for (let i = 0; i < 20; i += 1) {
+        renderBook(selectedEntries[i], parentId, i);
+      }
+    });
   };
 
   const suggestionForm = document.getElementById("book-suggestion-form");
@@ -182,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
       author: (formData.get("author") || "").toString().trim(),
       link: (formData.get("link") || "").toString().trim(),
       pages: (formData.get("pages") || "").toString().trim(),
-      track: (formData.get("track") || "first_entry").toString(),
+      track: (formData.get("track") || "entry_point").toString(),
     };
   };
 
