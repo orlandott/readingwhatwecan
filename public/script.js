@@ -365,6 +365,57 @@ document.addEventListener("DOMContentLoaded", () => {
     return `Useful ${source} resource for understanding AI safety risks, alignment strategies, and governance trade-offs.`;
   };
 
+  const normalizeTitleForLookup = (title = "") =>
+    title
+      .toString()
+      .normalize("NFKD")
+      .replaceAll(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replaceAll(/&/g, " and ")
+      .replaceAll(/\((18|19|20)\d{2}\)/g, " ")
+      .replaceAll(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  const titleAliasLookup = {
+    "the precipice chapter on ai": "the precipice",
+    "general intelligence from ai services": "reframing superintelligence",
+    "harry potter and the methods of rationality 1 of 6":
+      "harry potter and the methods of rationality",
+    "the dark forest 2 of three body problem": "the dark forest",
+  };
+
+  const getTitleLookupKey = (title = "") => {
+    const normalized = normalizeTitleForLookup(title);
+    return titleAliasLookup[normalized] || normalized;
+  };
+
+  const isLikelySearchLink = (link = "") => {
+    const normalizedLink = link.toLowerCase();
+    return (
+      normalizedLink.includes("google.com/search") ||
+      normalizedLink.includes("goodreads.com/search")
+    );
+  };
+
+  const getEntryQualityScore = (entry = {}) => {
+    const hasSummary = Boolean((entry.Summary || "").trim());
+    const hasImage = Boolean((entry.Image || "").trim());
+    const hasPages = Boolean(normalizePositiveInteger(entry.page_count));
+    const hasYear = Boolean(getEntryYear(entry));
+    const hasCategory = Boolean((entry.Category || "").trim());
+    const link = (entry.Link || "").trim();
+    const hasStrongLink = Boolean(link) && !isLikelySearchLink(link);
+
+    return (
+      (hasSummary ? 8 : 0) +
+      (hasImage ? 4 : 0) +
+      (hasPages ? 3 : 0) +
+      (hasYear ? 2 : 0) +
+      (hasStrongLink ? 2 : 0) +
+      (hasCategory ? 1 : 0)
+    );
+  };
+
   const formatRank = (index) => (index + 1 < 10 ? `0${index + 1}` : `${index + 1}`);
 
   const getFallbackInitial = (title = "") => {
@@ -617,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const buildEntryLookup = () => {
-    const byName = new Map();
+    const byLookupKey = new Map();
     const extras =
       typeof additional_resources !== "undefined" && Array.isArray(additional_resources)
         ? additional_resources
@@ -627,60 +678,75 @@ document.addEventListener("DOMContentLoaded", () => {
         ? curated_resources
         : [];
     const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras, ...curatedAdditions];
-    const categoryNamesFromData = {
-      entry_point: [],
-      canon: [],
-      problem_space: [],
-      technical_frontier: [],
-      speculative_fiction: [],
+    const categoryKeysFromData = {
+      entry_point: new Set(),
+      canon: new Set(),
+      problem_space: new Set(),
+      technical_frontier: new Set(),
+      speculative_fiction: new Set(),
     };
 
     allEntries.forEach((entry) => {
+      if (!entry || !entry.Name) {
+        return;
+      }
+
       enrichEntryLinks(entry);
       const inferredYear = getEntryYear(entry);
       if (!entry.Year && inferredYear) {
         entry.Year = inferredYear;
       }
-      if (!entry || !entry.Name) {
+      const lookupKey = getTitleLookupKey(entry.Name);
+      if (!lookupKey) {
         return;
       }
 
-      if (!byName.has(entry.Name)) {
-        byName.set(entry.Name, entry);
+      if (!byLookupKey.has(lookupKey)) {
+        byLookupKey.set(lookupKey, entry);
       } else {
-        const existingEntry = byName.get(entry.Name);
+        const existingEntry = byLookupKey.get(lookupKey);
         if (existingEntry) {
-          if (!existingEntry.Author && entry.Author) {
-            existingEntry.Author = entry.Author;
+          const shouldSwapPrimary =
+            getEntryQualityScore(entry) > getEntryQualityScore(existingEntry);
+          const primaryEntry = shouldSwapPrimary ? entry : existingEntry;
+          const secondaryEntry = shouldSwapPrimary ? existingEntry : entry;
+
+          if (!primaryEntry.Author && secondaryEntry.Author) {
+            primaryEntry.Author = secondaryEntry.Author;
           }
-          if ((!existingEntry.Link || !existingEntry.Link.trim()) && entry.Link) {
-            existingEntry.Link = entry.Link;
+          if ((!primaryEntry.Link || !primaryEntry.Link.trim()) && secondaryEntry.Link) {
+            primaryEntry.Link = secondaryEntry.Link;
           }
-          if ((!existingEntry.Image || !existingEntry.Image.trim()) && entry.Image) {
-            existingEntry.Image = entry.Image;
+          if ((!primaryEntry.Image || !primaryEntry.Image.trim()) && secondaryEntry.Image) {
+            primaryEntry.Image = secondaryEntry.Image;
           }
-          if (!normalizePositiveInteger(existingEntry.page_count) && normalizePositiveInteger(entry.page_count)) {
-            existingEntry.page_count = entry.page_count;
+          if (!normalizePositiveInteger(primaryEntry.page_count) && normalizePositiveInteger(secondaryEntry.page_count)) {
+            primaryEntry.page_count = secondaryEntry.page_count;
           }
-          if (!existingEntry.Year && entry.Year) {
-            existingEntry.Year = entry.Year;
+          if (!primaryEntry.Year && secondaryEntry.Year) {
+            primaryEntry.Year = secondaryEntry.Year;
           }
-          if ((!existingEntry.Summary || !existingEntry.Summary.trim()) && entry.Summary) {
-            existingEntry.Summary = entry.Summary;
+          if ((!primaryEntry.Summary || !primaryEntry.Summary.trim()) && secondaryEntry.Summary) {
+            primaryEntry.Summary = secondaryEntry.Summary;
           }
-          if (!existingEntry.Category && entry.Category) {
-            existingEntry.Category = entry.Category;
+          if (!primaryEntry.Category && secondaryEntry.Category) {
+            primaryEntry.Category = secondaryEntry.Category;
           }
+          if (!primaryEntry.Goodreads && secondaryEntry.Goodreads) {
+            primaryEntry.Goodreads = secondaryEntry.Goodreads;
+          }
+
+          byLookupKey.set(lookupKey, primaryEntry);
         }
       }
 
       const categoryKey = (entry.Category || "").toString();
-      if (categoryNamesFromData[categoryKey] && !categoryNamesFromData[categoryKey].includes(entry.Name)) {
-        categoryNamesFromData[categoryKey].push(entry.Name);
+      if (categoryKeysFromData[categoryKey]) {
+        categoryKeysFromData[categoryKey].add(lookupKey);
       }
     });
 
-    return { byName, categoryNamesFromData };
+    return { byLookupKey, categoryKeysFromData };
   };
 
   const sortControl = document.getElementById("category-sort-control");
@@ -726,7 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const renderAllBooks = () => {
-    const { byName: entryLookup, categoryNamesFromData } = buildEntryLookup();
+    const { byLookupKey: entryLookup, categoryKeysFromData } = buildEntryLookup();
     const sortMode = getSortMode();
     const filterUnknownYears = shouldFilterUnknownYears();
 
@@ -737,13 +803,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       categoryParent.innerHTML = "";
 
-      const selectedNames = [
-        ...(categoryBookNames[key] || []),
-        ...(categoryNamesFromData[key] || []),
-      ];
-      const uniqueNames = [...new Set(selectedNames)];
-      const selectedEntries = uniqueNames
-        .map((name) => entryLookup.get(name))
+      const selectedLookupKeys = new Set();
+      (categoryBookNames[key] || []).forEach((name) => {
+        const lookupKey = getTitleLookupKey(name);
+        if (lookupKey) {
+          selectedLookupKeys.add(lookupKey);
+        }
+      });
+      (categoryKeysFromData[key] || new Set()).forEach((lookupKey) => {
+        if (lookupKey) {
+          selectedLookupKeys.add(lookupKey);
+        }
+      });
+
+      const selectedEntries = [...selectedLookupKeys]
+        .map((lookupKey) => entryLookup.get(lookupKey))
         .filter(Boolean);
 
       const filteredEntries = filterUnknownYears
