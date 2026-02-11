@@ -3,12 +3,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const panes = document.querySelectorAll(".w-tab-pane");
 
   const sourceLabels = [
+    { match: "goodreads.com", label: "Goodreads" },
     { match: "amazon", label: "Amazon" },
     { match: ".pdf", label: "PDF" },
     { match: "lesswrong", label: "LessWrong" },
     { match: "arxiv", label: "ArXiv" },
     { match: "docs.google", label: "Google Docs" },
   ];
+  const coverLookupCache = new Map();
+  const pendingCoverLookups = new Map();
 
   const trackLabels = {
     entry_point: "The Entry Point (Primers & Essays)",
@@ -185,11 +188,149 @@ document.addEventListener("DOMContentLoaded", () => {
     return found ? found.label : "Article";
   };
 
+  const buildGoodreadsSearchUrl = (entry = {}) => {
+    const query = [entry.Name || "", entry.Author || ""]
+      .join(" ")
+      .trim();
+    if (!query) {
+      return "https://www.goodreads.com/";
+    }
+    return `https://www.goodreads.com/search?q=${encodeURIComponent(query)}`;
+  };
+
+  const enrichEntryLinks = (entry) => {
+    if (!entry) {
+      return;
+    }
+
+    const rawLink = typeof entry.Link === "string" ? entry.Link.trim() : "";
+    const hasGoodreadsInPrimaryLink = rawLink.toLowerCase().includes("goodreads.com");
+
+    if (!entry.Goodreads || !entry.Goodreads.trim()) {
+      entry.Goodreads = hasGoodreadsInPrimaryLink
+        ? rawLink
+        : buildGoodreadsSearchUrl(entry);
+    }
+
+    if (!rawLink && entry.Goodreads) {
+      entry.Link = entry.Goodreads;
+    }
+  };
+
   const formatRank = (index) => (index + 1 < 10 ? `0${index + 1}` : `${index + 1}`);
 
   const getFallbackInitial = (title = "") => {
     const trimmed = title.trim();
     return trimmed.length ? trimmed[0].toUpperCase() : "R";
+  };
+
+  const toSafeDomId = (value = "") =>
+    value.toString().replaceAll(/[^a-zA-Z0-9_-]/g, "-");
+
+  const extractOpenLibraryCover = (payload) => {
+    const docs = payload && Array.isArray(payload.docs) ? payload.docs : [];
+    const match = docs.find((doc) => doc && doc.cover_i);
+    return match ? `https://covers.openlibrary.org/b/id/${match.cover_i}-L.jpg` : "";
+  };
+
+  const queryOpenLibraryCover = async (entry) => {
+    const title = (entry.Name || "").trim();
+    const author = (entry.Author || "").trim();
+    if (!title) {
+      return "";
+    }
+
+    const queryUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}${author ? `&author=${encodeURIComponent(author)}` : ""}&limit=5`;
+    const response = await fetch(queryUrl);
+    if (!response.ok) {
+      return "";
+    }
+
+    const payload = await response.json();
+    return extractOpenLibraryCover(payload);
+  };
+
+  const queryGoogleBooksCover = async (entry) => {
+    const title = (entry.Name || "").trim();
+    const author = (entry.Author || "").trim();
+    if (!title) {
+      return "";
+    }
+
+    const queryParts = [`intitle:${title}`];
+    if (author) {
+      queryParts.push(`inauthor:${author}`);
+    }
+    const queryUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryParts.join(" "))}&maxResults=3`;
+    const response = await fetch(queryUrl);
+    if (!response.ok) {
+      return "";
+    }
+
+    const payload = await response.json();
+    const items = payload && Array.isArray(payload.items) ? payload.items : [];
+    const match = items.find((item) => item && item.volumeInfo && item.volumeInfo.imageLinks);
+    if (!match || !match.volumeInfo || !match.volumeInfo.imageLinks) {
+      return "";
+    }
+
+    const links = match.volumeInfo.imageLinks;
+    const coverUrl = links.thumbnail || links.smallThumbnail || "";
+    return coverUrl ? coverUrl.replace("http://", "https://") : "";
+  };
+
+  const fetchCoverImageUrl = async (entry) => {
+    const key = `${(entry.Name || "").trim().toLowerCase()}::${(entry.Author || "").trim().toLowerCase()}`;
+    if (!key || key === "::") {
+      return "";
+    }
+
+    if (coverLookupCache.has(key)) {
+      return coverLookupCache.get(key);
+    }
+
+    if (pendingCoverLookups.has(key)) {
+      return pendingCoverLookups.get(key);
+    }
+
+    const pendingLookup = (async () => {
+      let coverUrl = "";
+      try {
+        coverUrl = await queryOpenLibraryCover(entry);
+        if (!coverUrl) {
+          coverUrl = await queryGoogleBooksCover(entry);
+        }
+      } catch (error) {
+        coverUrl = "";
+      }
+
+      coverLookupCache.set(key, coverUrl);
+      pendingCoverLookups.delete(key);
+      return coverUrl;
+    })();
+
+    pendingCoverLookups.set(key, pendingLookup);
+    return pendingLookup;
+  };
+
+  const hydrateCoverImage = async (entry, coverElementId) => {
+    if (!entry || entry.Image) {
+      return;
+    }
+
+    const coverUrl = await fetchCoverImageUrl(entry);
+    if (!coverUrl) {
+      return;
+    }
+
+    entry.Image = coverUrl;
+    const coverElement = document.getElementById(coverElementId);
+    if (!coverElement) {
+      return;
+    }
+
+    const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
+    coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
   };
 
   const renderBook = (entry, target, index) => {
@@ -219,10 +360,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    enrichEntryLinks(entry);
     const safeName = escapeHtml(entry.Name || "Untitled");
     const safeAuthor = escapeHtml(entry.Author || "Unknown author");
-    const normalizedLink = (entry.Link || "#").trim();
+    const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
     const safeLink = escapeHtml(normalizedLink);
+    const coverElementId = `book-cover-${toSafeDomId(target)}-${index}`;
     const pageCount = Number.isFinite(Number(entry.page_count)) && Number(entry.page_count) > 0
       ? `${Number(entry.page_count)} pages`
       : "Page count unknown";
@@ -235,7 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `
       <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="hypothesis book responsive w-inline-block">
         <span class="book-rank">${formatRank(index)}</span>
-        <span class="book-cover">${coverMarkup}</span>
+        <span id="${coverElementId}" class="book-cover">${coverMarkup}</span>
         <div class="book-main">
           <h4 class="idea-header book">${safeName}</h4>
           <span class="author" title="${safeAuthor}">${safeAuthor}</span>
@@ -247,6 +390,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
       </a>`
     );
+
+    if (!entry.Image) {
+      void hydrateCoverImage(entry, coverElementId);
+    }
   };
 
   const buildEntryLookup = () => {
@@ -258,6 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const allEntries = [...first_entry, ...ml, ...ais, ...scifi, ...extras];
 
     allEntries.forEach((entry) => {
+      enrichEntryLinks(entry);
       if (entry && entry.Name && !byName.has(entry.Name)) {
         byName.set(entry.Name, entry);
       }
