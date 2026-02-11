@@ -36,6 +36,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const submissionTimeoutMs = 15000;
   const metadataLookupTimeoutMs = 12000;
   const metadataHydrationConcurrency = 6;
+  const readingListStorageKey = "rwwc-reading-list-v1";
+  const readingProgressLabels = {
+    "": "No status",
+    to_read: "To read",
+    reading: "Reading",
+    finished: "Finished",
+  };
+  const readingProgressOrder = ["to_read", "reading", "finished"];
 
   const baseCategoryBookNames = {
     entry_point: [
@@ -487,6 +495,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return found ? found.label : "Article";
   };
 
+  const normalizeTypeKey = (value = "") =>
+    value
+      .toString()
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "_")
+      .replaceAll(/^_+|_+$/g, "");
+
   const buildGoodreadsSearchUrl = (entry = {}) => {
     const query = [entry.Name || "", entry.Author || ""]
       .join(" ")
@@ -782,6 +797,233 @@ document.addEventListener("DOMContentLoaded", () => {
   const getTitleLookupKey = (title = "") => {
     const normalized = normalizeTitleForLookup(title);
     return titleAliasLookup[normalized] || normalized;
+  };
+
+  const isValidProgressStatus = (value = "") =>
+    readingProgressOrder.includes(value.toString());
+
+  const getReadingProgressLabel = (value = "") =>
+    readingProgressLabels[value] || readingProgressLabels[""];
+
+  const getProgressOptionsMarkup = (selectedValue = "") =>
+    [
+      `<option value=""${selectedValue ? "" : " selected"}>${readingProgressLabels[""]}</option>`,
+      ...readingProgressOrder.map(
+        (status) =>
+          `<option value="${status}"${selectedValue === status ? " selected" : ""}>${readingProgressLabels[status]}</option>`
+      ),
+    ].join("");
+
+  const getEntryTypeKey = (entry = {}) =>
+    normalizeTypeKey(getSourceLabel(getEntryPrimaryLink(entry)));
+
+  const readingListSummaryElement = document.getElementById("reading-list-summary");
+  const readingTrackProgressElement = document.getElementById("reading-track-progress");
+  const readingListPreviewElement = document.getElementById("reading-list-preview");
+  let latestEntryLookup = new Map();
+
+  const normalizeStoredTimestamp = (value = "") => {
+    const timestamp = Date.parse(value.toString());
+    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString();
+  };
+
+  const normalizeReadingListRecord = (lookupKey, record = {}) => {
+    const normalizedStatus = isValidProgressStatus(record.status) ? record.status : "";
+    const normalizedYear = normalizeYear(record.year);
+    const normalizedLink = isValidHttpUrl(record.link || "") ? record.link.toString().trim() : "";
+    const normalizedCategory = validTrackKeys.has((record.category || "").toString())
+      ? (record.category || "").toString()
+      : "";
+    return {
+      lookupKey,
+      name: trimToLimit(record.name || "", 180),
+      author: trimToLimit(record.author || "", 140),
+      link: normalizedLink,
+      category: normalizedCategory,
+      year: normalizedYear || null,
+      status: normalizedStatus,
+      savedAt: normalizeStoredTimestamp(record.savedAt),
+      updatedAt: normalizeStoredTimestamp(record.updatedAt),
+    };
+  };
+
+  const loadReadingListState = () => {
+    try {
+      const storedValue = window.localStorage.getItem(readingListStorageKey);
+      if (!storedValue) {
+        return {};
+      }
+      const parsed = JSON.parse(storedValue);
+      if (!parsed || typeof parsed !== "object") {
+        return {};
+      }
+      const normalizedEntries = {};
+      Object.entries(parsed).forEach(([lookupKey, record]) => {
+        if (!lookupKey) {
+          return;
+        }
+        normalizedEntries[lookupKey] = normalizeReadingListRecord(lookupKey, record);
+      });
+      return normalizedEntries;
+    } catch (error) {
+      logResilienceWarning("reading_list_load_failed", {}, error);
+      return {};
+    }
+  };
+
+  let readingListState = loadReadingListState();
+
+  const persistReadingListState = () => {
+    try {
+      window.localStorage.setItem(readingListStorageKey, JSON.stringify(readingListState));
+    } catch (error) {
+      logResilienceWarning("reading_list_persist_failed", {}, error);
+    }
+  };
+
+  const getReadingListRecord = (lookupKey = "") =>
+    (lookupKey && readingListState[lookupKey]) || null;
+
+  const createReadingListRecordFromEntry = (lookupKey, entry, status = "") => {
+    const existing = getReadingListRecord(lookupKey);
+    const nowIso = new Date().toISOString();
+    const linkFromEntry = getEntryPrimaryLink(entry);
+    const normalizedLink =
+      isValidHttpUrl(linkFromEntry) && isHttpsUrl(linkFromEntry)
+        ? linkFromEntry
+        : existing && existing.link
+          ? existing.link
+          : "";
+    const normalizedStatus = isValidProgressStatus(status)
+      ? status
+      : existing && isValidProgressStatus(existing.status)
+        ? existing.status
+        : "";
+
+    return {
+      lookupKey,
+      name: trimToLimit(
+        (entry && entry.Name) || (existing && existing.name) || "Untitled",
+        180
+      ),
+      author: trimToLimit(
+        (entry && entry.Author) || (existing && existing.author) || "",
+        140
+      ),
+      link: normalizedLink,
+      category:
+        (entry && validTrackKeys.has((entry.Category || "").toString()) && entry.Category) ||
+        (existing && existing.category) ||
+        "",
+      year:
+        (entry && getEntryYear(entry)) ||
+        (existing && normalizeYear(existing.year)) ||
+        null,
+      status: normalizedStatus,
+      savedAt: (existing && existing.savedAt) || nowIso,
+      updatedAt: nowIso,
+    };
+  };
+
+  const updateReadingListRecord = (lookupKey, entry, status = "") => {
+    if (!lookupKey) {
+      return;
+    }
+    const nextRecord = createReadingListRecordFromEntry(lookupKey, entry, status);
+    readingListState = {
+      ...readingListState,
+      [lookupKey]: nextRecord,
+    };
+    persistReadingListState();
+  };
+
+  const removeReadingListRecord = (lookupKey) => {
+    if (!lookupKey || !readingListState[lookupKey]) {
+      return;
+    }
+    const nextState = { ...readingListState };
+    delete nextState[lookupKey];
+    readingListState = nextState;
+    persistReadingListState();
+  };
+
+  const getSortedReadingListRecords = () =>
+    Object.values(readingListState).sort(
+      (left, right) => Date.parse(right.updatedAt || "") - Date.parse(left.updatedAt || "")
+    );
+
+  const renderReadingDashboard = () => {
+    if (!readingListSummaryElement || !readingTrackProgressElement || !readingListPreviewElement) {
+      return;
+    }
+
+    const records = getSortedReadingListRecords();
+    const totalSaved = records.length;
+    const totalFinished = records.filter((record) => record.status === "finished").length;
+    const completionPercent = totalSaved
+      ? Math.round((totalFinished / totalSaved) * 100)
+      : 0;
+    readingListSummaryElement.textContent = totalSaved
+      ? `${totalSaved} saved • ${totalFinished} finished (${completionPercent}% complete)`
+      : "Save resources to track progress.";
+
+    const trackProgressMarkup = Object.entries(trackLabels)
+      .map(([trackKey, trackLabel]) => {
+        const trackRecords = records.filter((record) => record.category === trackKey);
+        const trackFinished = trackRecords.filter((record) => record.status === "finished").length;
+        const trackPercent = trackRecords.length
+          ? Math.round((trackFinished / trackRecords.length) * 100)
+          : 0;
+        return `
+          <div class="track-progress-item">
+            <div class="track-progress-top">
+              <span class="track-progress-label">${escapeHtml(trackLabel)}</span>
+              <span class="track-progress-count">${trackFinished}/${trackRecords.length || 0}</span>
+            </div>
+            <div class="track-progress-bar">
+              <span class="track-progress-fill" style="width:${trackPercent}%"></span>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+    readingTrackProgressElement.innerHTML = trackProgressMarkup;
+
+    if (!records.length) {
+      readingListPreviewElement.innerHTML = `
+        <li class="reading-list-empty">
+          No saved resources yet. Use the Save button on any resource card.
+        </li>
+      `;
+      return;
+    }
+
+    readingListPreviewElement.innerHTML = records
+      .slice(0, 10)
+      .map((record) => {
+        const safeName = escapeHtml(record.name || "Untitled");
+        const safeAuthor = escapeHtml(record.author || "Unknown author");
+        const safeLink = escapeHtml(record.link || "#");
+        const safeLookupKey = escapeHtml(record.lookupKey || "");
+        const progressMarkup = getProgressOptionsMarkup(record.status || "");
+        return `
+          <li class="reading-list-item">
+            <div class="reading-list-item-main">
+              <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="reading-list-item-link">${safeName}</a>
+              <span class="reading-list-item-meta">${safeAuthor}</span>
+            </div>
+            <div class="reading-list-item-actions">
+              <select class="reading-list-status-select" data-dashboard-progress-select="${safeLookupKey}" aria-label="Progress for ${safeName}">
+                ${progressMarkup}
+              </select>
+              <button type="button" class="reading-list-remove" data-reading-remove-key="${safeLookupKey}">
+                Remove
+              </button>
+            </div>
+          </li>
+        `;
+      })
+      .join("");
   };
   const disabledTitleKeys = new Set(
     resourceGuardrails.disabledTitles
@@ -1198,12 +1440,24 @@ document.addEventListener("DOMContentLoaded", () => {
       if (entry.Image !== safeImageUrl) {
         entry.Image = safeImageUrl;
       }
+      const lookupKey = getTitleLookupKey(entry.Name || "");
+      if (!lookupKey) {
+        return;
+      }
+      const safeLookupKey = escapeHtml(lookupKey);
+      const readingRecord = getReadingListRecord(lookupKey);
+      const isSaved = Boolean(readingRecord);
+      const progressValue = readingRecord && isValidProgressStatus(readingRecord.status)
+        ? readingRecord.status
+        : "";
+      const progressOptionsMarkup = getProgressOptionsMarkup(progressValue);
       const entryDomKey = toSafeDomId(
         `${entry.Name || "untitled"}-${entry.Author || "unknown"}`
       );
       const coverElementId = `book-cover-${toSafeDomId(target)}-${entryDomKey}`;
       const pageElementId = `book-pages-${toSafeDomId(target)}-${entryDomKey}`;
       const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
+      const statusElementId = `book-status-${toSafeDomId(target)}-${entryDomKey}`;
       const pageCountText = getPageCountLabel(entry);
       const yearValue = getEntryYear(entry);
       const yearText = yearValue ? `${yearValue}` : "";
@@ -1214,7 +1468,7 @@ document.addEventListener("DOMContentLoaded", () => {
       parent.insertAdjacentHTML(
         "beforeend",
         `
-        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="hypothesis book responsive w-inline-block">
+        <article class="hypothesis book resource-card responsive w-inline-block${isSaved ? " is-saved" : ""}" data-lookup-key="${safeLookupKey}">
           <span class="book-rank">${formatRank(index)}</span>
           <span id="${coverElementId}" class="book-cover">${coverMarkup}</span>
           <div class="book-main">
@@ -1223,12 +1477,21 @@ document.addEventListener("DOMContentLoaded", () => {
             ${summaryMarkup}
             <div class="book-meta">
               <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
+              <span id="${statusElementId}" class="page-pill status-pill${progressValue ? "" : " is-hidden"}">${escapeHtml(getReadingProgressLabel(progressValue))}</span>
               <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
               <span id="${pageElementId}" class="page-pill${pageCountText ? "" : " is-hidden"}">${pageCountText}</span>
             </div>
+            <div class="resource-actions">
+              <button type="button" class="resource-save-button${isSaved ? " is-saved" : ""}" data-save-toggle="${safeLookupKey}" aria-pressed="${isSaved ? "true" : "false"}">
+                ${isSaved ? "Saved" : "Save"}
+              </button>
+              <select class="resource-progress-select" data-progress-select="${safeLookupKey}" aria-label="Reading progress for ${safeName}">
+                ${progressOptionsMarkup}
+              </select>
+            </div>
           </div>
-          <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
-        </a>`
+          <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="open-link resource-open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></a>
+        </article>`
       );
       wireCoverFallback(coverElementId, entry.Name || "Book");
 
@@ -1242,6 +1505,95 @@ document.addEventListener("DOMContentLoaded", () => {
         error
       );
     }
+  };
+
+  const applyReadingRecordToCardElement = (cardElement, record) => {
+    if (!cardElement) {
+      return;
+    }
+    const isSaved = Boolean(record);
+    cardElement.classList.toggle("is-saved", isSaved);
+
+    const saveButton = cardElement.querySelector("[data-save-toggle]");
+    if (saveButton) {
+      saveButton.textContent = isSaved ? "Saved" : "Save";
+      saveButton.classList.toggle("is-saved", isSaved);
+      saveButton.setAttribute("aria-pressed", isSaved ? "true" : "false");
+    }
+
+    const progressSelect = cardElement.querySelector("[data-progress-select]");
+    if (progressSelect) {
+      const nextProgressValue =
+        record && isValidProgressStatus(record.status) ? record.status : "";
+      progressSelect.value = nextProgressValue;
+    }
+
+    const statusPill = cardElement.querySelector(".status-pill");
+    if (statusPill) {
+      const nextStatus =
+        record && isValidProgressStatus(record.status) ? record.status : "";
+      statusPill.textContent = getReadingProgressLabel(nextStatus);
+      statusPill.classList.toggle("is-hidden", !nextStatus);
+    }
+  };
+
+  const syncReadingRecordToRenderedCards = (lookupKey) => {
+    if (!lookupKey) {
+      return;
+    }
+    const record = getReadingListRecord(lookupKey);
+    const cards = document.querySelectorAll(".resource-card[data-lookup-key]");
+    cards.forEach((card) => {
+      if (card && card.getAttribute("data-lookup-key") === lookupKey) {
+        applyReadingRecordToCardElement(card, record);
+      }
+    });
+  };
+
+  const getEntryByLookupKey = (lookupKey) =>
+    (lookupKey && latestEntryLookup && latestEntryLookup.get(lookupKey)) || null;
+
+  const toggleReadingListRecord = (lookupKey) => {
+    if (!lookupKey) {
+      return;
+    }
+    const existingRecord = getReadingListRecord(lookupKey);
+    if (existingRecord) {
+      removeReadingListRecord(lookupKey);
+      syncReadingRecordToRenderedCards(lookupKey);
+      renderReadingDashboard();
+      return;
+    }
+
+    const entry = getEntryByLookupKey(lookupKey);
+    if (!entry) {
+      logResilienceWarning("reading_list_add_missing_entry", { lookupKey });
+      return;
+    }
+    updateReadingListRecord(lookupKey, entry, "to_read");
+    syncReadingRecordToRenderedCards(lookupKey);
+    renderReadingDashboard();
+  };
+
+  const updateReadingProgress = (lookupKey, statusValue = "") => {
+    if (!lookupKey) {
+      return;
+    }
+    const normalizedStatus = isValidProgressStatus(statusValue) ? statusValue : "";
+    const existingRecord = getReadingListRecord(lookupKey);
+    const entry = getEntryByLookupKey(lookupKey);
+
+    if (!existingRecord && !entry) {
+      logResilienceWarning("reading_progress_update_missing_entry", {
+        lookupKey,
+        statusValue: normalizedStatus,
+      });
+      return;
+    }
+
+    updateReadingListRecord(lookupKey, entry || existingRecord, normalizedStatus);
+    syncReadingRecordToRenderedCards(lookupKey);
+    renderReadingDashboard();
   };
 
   const buildEntryLookup = () => {
@@ -1327,8 +1679,85 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const sortControl = document.getElementById("category-sort-control");
+  const typeControl = document.getElementById("category-type-control");
+  const yearFromControl = document.getElementById("category-year-from-control");
+  const yearToControl = document.getElementById("category-year-to-control");
+  const filterResetButton = document.getElementById("category-filter-reset");
 
   const getSortMode = () => (sortControl && sortControl.value) || "curated";
+
+  const getFilterState = () => {
+    const typeFilter = normalizeTypeKey((typeControl && typeControl.value) || "all") || "all";
+    let fromYear = normalizeYear((yearFromControl && yearFromControl.value) || "");
+    let toYear = normalizeYear((yearToControl && yearToControl.value) || "");
+    if (fromYear && toYear && fromYear > toYear) {
+      [fromYear, toYear] = [toYear, fromYear];
+      if (yearFromControl && yearToControl) {
+        yearFromControl.value = `${fromYear}`;
+        yearToControl.value = `${toYear}`;
+      }
+    }
+    return {
+      typeFilter,
+      fromYear,
+      toYear,
+    };
+  };
+
+  const hasActiveFilters = (filters) =>
+    Boolean(
+      filters &&
+      (filters.typeFilter !== "all" || filters.fromYear || filters.toYear)
+    );
+
+  const updateYearSelectOptions = (control, years = []) => {
+    if (!control) {
+      return;
+    }
+    const currentValue = normalizeYear(control.value);
+    const optionsMarkup = [
+      '<option value="">Any</option>',
+      ...years.map((year) => `<option value="${year}">${year}</option>`),
+    ].join("");
+    control.innerHTML = optionsMarkup;
+    if (currentValue && years.includes(currentValue)) {
+      control.value = `${currentValue}`;
+    }
+  };
+
+  const syncYearFilterControls = (entryLookup = new Map()) => {
+    const years = [...entryLookup.values()]
+      .map((entry) => getEntryYear(entry))
+      .filter((year) => Number.isFinite(year))
+      .filter((year, index, values) => values.indexOf(year) === index)
+      .sort((left, right) => left - right);
+    updateYearSelectOptions(yearFromControl, years);
+    updateYearSelectOptions(yearToControl, years);
+  };
+
+  const entryMatchesFilters = (entry, filters) => {
+    if (!entry) {
+      return false;
+    }
+    const entryType = getEntryTypeKey(entry);
+    if (filters.typeFilter !== "all" && entryType !== filters.typeFilter) {
+      return false;
+    }
+    if (!filters.fromYear && !filters.toYear) {
+      return true;
+    }
+    const entryYear = getEntryYear(entry);
+    if (!entryYear) {
+      return false;
+    }
+    if (filters.fromYear && entryYear < filters.fromYear) {
+      return false;
+    }
+    if (filters.toYear && entryYear > filters.toYear) {
+      return false;
+    }
+    return true;
+  };
 
   const compareEntriesByYearAsc = (left, right) => {
     const leftYear = getEntryYear(left);
@@ -1364,7 +1793,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return entries;
   };
 
-  const renderCategoryFallbackState = (parent) => {
+  const renderCategoryFallbackState = (
+    parent,
+    title = "Resources temporarily unavailable",
+    copy = "We could not load this category right now. Please refresh, or suggest a resource below."
+  ) => {
     if (!parent) {
       return;
     }
@@ -1372,8 +1805,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "beforeend",
       `
       <article class="resource-empty-state" role="status" aria-live="polite">
-        <h4 class="resource-empty-state-title">Resources temporarily unavailable</h4>
-        <p class="resource-empty-state-copy">We could not load this category right now. Please refresh, or suggest a resource below.</p>
+        <h4 class="resource-empty-state-title">${escapeHtml(title)}</h4>
+        <p class="resource-empty-state-copy">${escapeHtml(copy)}</p>
       </article>
       `
     );
@@ -1386,6 +1819,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const lookupResult = buildEntryLookup();
       entryLookup = lookupResult.byLookupKey;
       categoryKeysFromData = lookupResult.categoryKeysFromData;
+      latestEntryLookup = entryLookup;
+      syncYearFilterControls(entryLookup);
     } catch (error) {
       logResilienceError("resource_lookup_build_failed", {}, error);
       categoryTargets.forEach(({ parentId }) => {
@@ -1399,7 +1834,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       return;
     }
+    renderReadingDashboard();
     const sortMode = getSortMode();
+    const filterState = getFilterState();
+    const usingFilters = hasActiveFilters(filterState);
 
     categoryTargets.forEach(({ key, parentId }) => {
       try {
@@ -1425,11 +1863,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedEntries = [...selectedLookupKeys]
           .map((lookupKey) => entryLookup.get(lookupKey))
           .filter(Boolean);
+        const filteredEntries = selectedEntries.filter((entry) =>
+          entryMatchesFilters(entry, filterState)
+        );
 
-        const orderedEntries = sortSelectedEntries(selectedEntries, sortMode);
+        const orderedEntries = sortSelectedEntries(filteredEntries, sortMode);
 
         if (!orderedEntries.length) {
-          renderCategoryFallbackState(categoryParent);
+          if (usingFilters) {
+            renderCategoryFallbackState(
+              categoryParent,
+              "No resources match your filters",
+              "Try resetting type/year filters to broaden results."
+            );
+          } else {
+            renderCategoryFallbackState(categoryParent);
+          }
         } else {
           orderedEntries.forEach((entry, index) => {
             renderBook(entry, parentId, index);
@@ -1678,6 +2127,89 @@ document.addEventListener("DOMContentLoaded", () => {
       renderAllBooks();
     });
   }
+
+  if (typeControl) {
+    typeControl.addEventListener("change", () => {
+      renderAllBooks();
+    });
+  }
+
+  if (yearFromControl) {
+    yearFromControl.addEventListener("change", () => {
+      renderAllBooks();
+    });
+  }
+
+  if (yearToControl) {
+    yearToControl.addEventListener("change", () => {
+      renderAllBooks();
+    });
+  }
+
+  if (filterResetButton) {
+    filterResetButton.addEventListener("click", () => {
+      if (typeControl) {
+        typeControl.value = "all";
+      }
+      if (yearFromControl) {
+        yearFromControl.value = "";
+      }
+      if (yearToControl) {
+        yearToControl.value = "";
+      }
+      renderAllBooks();
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    const clickTarget = event.target;
+    if (!clickTarget || typeof clickTarget.closest !== "function") {
+      return;
+    }
+
+    const saveToggleButton = clickTarget.closest("[data-save-toggle]");
+    if (saveToggleButton) {
+      event.preventDefault();
+      const lookupKey = (saveToggleButton.getAttribute("data-save-toggle") || "").trim();
+      if (lookupKey) {
+        toggleReadingListRecord(lookupKey);
+      }
+      return;
+    }
+
+    const removeButton = clickTarget.closest("[data-reading-remove-key]");
+    if (removeButton) {
+      event.preventDefault();
+      const lookupKey = (removeButton.getAttribute("data-reading-remove-key") || "").trim();
+      if (lookupKey) {
+        removeReadingListRecord(lookupKey);
+        syncReadingRecordToRenderedCards(lookupKey);
+        renderReadingDashboard();
+      }
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const changeTarget = event.target;
+    if (!changeTarget || typeof changeTarget.matches !== "function") {
+      return;
+    }
+
+    if (changeTarget.matches("[data-progress-select]")) {
+      const lookupKey = (changeTarget.getAttribute("data-progress-select") || "").trim();
+      if (lookupKey) {
+        updateReadingProgress(lookupKey, changeTarget.value || "");
+      }
+      return;
+    }
+
+    if (changeTarget.matches("[data-dashboard-progress-select]")) {
+      const lookupKey = (changeTarget.getAttribute("data-dashboard-progress-select") || "").trim();
+      if (lookupKey) {
+        updateReadingProgress(lookupKey, changeTarget.value || "");
+      }
+    }
+  });
 
   renderAllBooks();
 });
