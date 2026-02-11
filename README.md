@@ -16,3 +16,24 @@ Suggestions are submitted from the website based on the config in [`public/sugge
 - Use [`docs/google-form-copy.md`](docs/google-form-copy.md) as the canonical Google Form copy template.
 
 Keep config changes in git so submission routing is reviewable in pull requests.
+
+### Resource guardrails
+
+To prevent a single bad entry from breaking the page and to catch dead links early:
+
+- Runtime guardrails are loaded from [`public/resource-guardrails-config.js`](public/resource-guardrails-config.js).
+  - `disabledTitles`: temporarily hide resources by title.
+  - `disabledLinks`: temporarily hide resources by URL.
+- Link checks can be run locally:
+
+```bash
+node scripts/resource-guardrails.mjs
+```
+
+- To automatically add hard-broken resources (404/410/451 or bad redirects) to runtime guardrails:
+
+```bash
+node scripts/resource-guardrails.mjs --update-config
+```
+
+A GitHub Action also runs this checker on PRs and weekly schedules.

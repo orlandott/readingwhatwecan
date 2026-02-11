@@ -1,6 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".gauntlet-tab");
   const panes = document.querySelectorAll(".w-tab-pane");
+  const defaultResourceGuardrails = {
+    disabledTitles: [],
+    disabledLinks: [],
+  };
+  const rawResourceGuardrails = window.RWWC_RESOURCE_GUARDRAILS || {};
+  const resourceGuardrails = {
+    disabledTitles: Array.isArray(rawResourceGuardrails.disabledTitles)
+      ? rawResourceGuardrails.disabledTitles
+      : defaultResourceGuardrails.disabledTitles,
+    disabledLinks: Array.isArray(rawResourceGuardrails.disabledLinks)
+      ? rawResourceGuardrails.disabledLinks
+      : defaultResourceGuardrails.disabledLinks,
+  };
 
   const sourceLabels = [
     { match: "goodreads.com", label: "Book" },
@@ -469,6 +482,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
   };
 
+  const isValidHttpUrl = (value = "") => {
+    try {
+      const url = new URL(value.toString().trim());
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch (error) {
+      return false;
+    }
+  };
+
   const normalizeYear = (value) => {
     const numericValue = Number.parseInt(value, 10);
     return Number.isFinite(numericValue) && numericValue >= 1800 && numericValue <= 2100
@@ -590,6 +612,30 @@ document.addEventListener("DOMContentLoaded", () => {
   const getTitleLookupKey = (title = "") => {
     const normalized = normalizeTitleForLookup(title);
     return titleAliasLookup[normalized] || normalized;
+  };
+  const disabledTitleKeys = new Set(
+    resourceGuardrails.disabledTitles
+      .map((title) => getTitleLookupKey(title))
+      .filter(Boolean)
+  );
+  const disabledLinks = new Set(
+    resourceGuardrails.disabledLinks
+      .map((link) => link.toString().trim())
+      .filter(Boolean)
+  );
+
+  const isEntryDisabledByGuardrails = (entry, lookupKey = "") => {
+    if (!entry) {
+      return true;
+    }
+    if (lookupKey && disabledTitleKeys.has(lookupKey)) {
+      return true;
+    }
+    const entryLink = (entry.Link || entry.Goodreads || "").toString().trim();
+    if (!entryLink || !isValidHttpUrl(entryLink)) {
+      return true;
+    }
+    return disabledLinks.has(entryLink);
   };
 
   const isLikelySearchLink = (link = "") => {
@@ -773,123 +819,136 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const hydrateEntryMetadata = async (entry, ids) => {
-    if (!entry) {
-      return;
-    }
-
-    if (entry.Image && normalizePositiveInteger(entry.page_count) && getEntryYear(entry)) {
-      return;
-    }
-
-    const metadata = await fetchEntryMetadata(entry);
-
-    if (!entry.Image && metadata.coverUrl) {
-      entry.Image = metadata.coverUrl;
-      const coverElement = document.getElementById(ids.coverElementId);
-      if (coverElement) {
-        const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
-        coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(metadata.coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
+    try {
+      if (!entry) {
+        return;
       }
-      wireCoverFallback(ids.coverElementId, entry.Name || "Book");
-    }
 
-    if (!normalizePositiveInteger(entry.page_count) && metadata.pageCount) {
-      entry.page_count = metadata.pageCount;
-      const pageElement = document.getElementById(ids.pageElementId);
-      if (pageElement) {
-        pageElement.textContent = `${metadata.pageCount} pages`;
-        pageElement.classList.remove("is-hidden");
+      if (entry.Image && normalizePositiveInteger(entry.page_count) && getEntryYear(entry)) {
+        return;
       }
-    }
 
-    if (!getEntryYear(entry) && metadata.year) {
-      entry.Year = metadata.year;
-      const yearElement = document.getElementById(ids.yearElementId);
-      if (yearElement) {
-        yearElement.textContent = `${metadata.year}`;
-        yearElement.classList.remove("is-hidden");
+      const metadata = await fetchEntryMetadata(entry);
+
+      if (!entry.Image && metadata.coverUrl) {
+        entry.Image = metadata.coverUrl;
+        const coverElement = document.getElementById(ids.coverElementId);
+        if (coverElement) {
+          const safeAlt = escapeHtml(`${entry.Name || "Book"} cover`);
+          coverElement.innerHTML = `<img class="book-image" src="${escapeHtml(metadata.coverUrl)}" loading="lazy" alt="${safeAlt}" />`;
+        }
+        wireCoverFallback(ids.coverElementId, entry.Name || "Book");
       }
+
+      if (!normalizePositiveInteger(entry.page_count) && metadata.pageCount) {
+        entry.page_count = metadata.pageCount;
+        const pageElement = document.getElementById(ids.pageElementId);
+        if (pageElement) {
+          pageElement.textContent = `${metadata.pageCount} pages`;
+          pageElement.classList.remove("is-hidden");
+        }
+      }
+
+      if (!getEntryYear(entry) && metadata.year) {
+        entry.Year = metadata.year;
+        const yearElement = document.getElementById(ids.yearElementId);
+        if (yearElement) {
+          yearElement.textContent = `${metadata.year}`;
+          yearElement.classList.remove("is-hidden");
+        }
+      }
+    } catch (error) {
+      // Keep rendering resilient even when metadata providers fail.
+      console.warn("Metadata hydration skipped for entry", entry && entry.Name);
     }
   };
 
   const renderBook = (entry, target, index) => {
-    const parent = document.getElementById(target);
-    if (!parent) {
-      return;
-    }
+    try {
+      const parent = document.getElementById(target);
+      if (!parent) {
+        return;
+      }
 
-    if (!entry) {
+      if (!entry) {
+        parent.insertAdjacentHTML(
+          "beforeend",
+          `
+          <a href="#suggestion-form-section" class="hypothesis book suggestion-card responsive w-inline-block">
+            <span class="book-rank">${formatRank(index)}</span>
+            <span class="book-cover"><span class="cover-fallback">+</span></span>
+            <div class="book-main">
+              <h4 class="idea-header book">Suggest a title for this slot</h4>
+              <span class="author">Use the quick form above</span>
+              <div class="book-meta">
+                <span class="source-pill">Community</span>
+                <span class="page-pill">Open suggestion</span>
+              </div>
+            </div>
+            <span class="open-link">Suggest <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
+          </a>`
+        );
+        return;
+      }
+
+      enrichEntryLinks(entry);
+      applySeededMetadata(entry);
+      const inferredYear = getEntryYear(entry);
+      if (!entry.Year && inferredYear) {
+        entry.Year = inferredYear;
+      }
+
+      const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
+      if (!isValidHttpUrl(normalizedLink)) {
+        return;
+      }
+
+      const safeName = escapeHtml(entry.Name || "Untitled");
+      const safeAuthor = escapeHtml(entry.Author || "Unknown author");
+      const safeSummary = escapeHtml(getEntrySummary(entry));
+      const summaryMarkup = safeSummary
+        ? `<p class="resource-summary" title="${safeSummary}">${safeSummary}</p>`
+        : "";
+      const safeLink = escapeHtml(normalizedLink);
+      const entryDomKey = toSafeDomId(
+        `${entry.Name || "untitled"}-${entry.Author || "unknown"}`
+      );
+      const coverElementId = `book-cover-${toSafeDomId(target)}-${entryDomKey}`;
+      const pageElementId = `book-pages-${toSafeDomId(target)}-${entryDomKey}`;
+      const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
+      const pageCountText = getPageCountLabel(entry);
+      const yearValue = getEntryYear(entry);
+      const yearText = yearValue ? `${yearValue}` : "";
+      const coverMarkup = entry.Image
+        ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
+        : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
+
       parent.insertAdjacentHTML(
         "beforeend",
         `
-        <a href="#suggestion-form-section" class="hypothesis book suggestion-card responsive w-inline-block">
+        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="hypothesis book responsive w-inline-block">
           <span class="book-rank">${formatRank(index)}</span>
-          <span class="book-cover"><span class="cover-fallback">+</span></span>
+          <span id="${coverElementId}" class="book-cover">${coverMarkup}</span>
           <div class="book-main">
-            <h4 class="idea-header book">Suggest a title for this slot</h4>
-            <span class="author">Use the quick form above</span>
+            <h4 class="idea-header book">${safeName}</h4>
+            <span class="author" title="${safeAuthor}">${safeAuthor}</span>
+            ${summaryMarkup}
             <div class="book-meta">
-              <span class="source-pill">Community</span>
-              <span class="page-pill">Open suggestion</span>
+              <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
+              <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
+              <span id="${pageElementId}" class="page-pill${pageCountText ? "" : " is-hidden"}">${pageCountText}</span>
             </div>
           </div>
-          <span class="open-link">Suggest <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
+          <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
         </a>`
       );
-      return;
-    }
+      wireCoverFallback(coverElementId, entry.Name || "Book");
 
-    enrichEntryLinks(entry);
-    applySeededMetadata(entry);
-    const inferredYear = getEntryYear(entry);
-    if (!entry.Year && inferredYear) {
-      entry.Year = inferredYear;
-    }
-
-    const safeName = escapeHtml(entry.Name || "Untitled");
-    const safeAuthor = escapeHtml(entry.Author || "Unknown author");
-    const safeSummary = escapeHtml(getEntrySummary(entry));
-    const summaryMarkup = safeSummary
-      ? `<p class="resource-summary" title="${safeSummary}">${safeSummary}</p>`
-      : "";
-    const normalizedLink = (entry.Link || entry.Goodreads || "#").trim();
-    const safeLink = escapeHtml(normalizedLink);
-    const entryDomKey = toSafeDomId(
-      `${entry.Name || "untitled"}-${entry.Author || "unknown"}`
-    );
-    const coverElementId = `book-cover-${toSafeDomId(target)}-${entryDomKey}`;
-    const pageElementId = `book-pages-${toSafeDomId(target)}-${entryDomKey}`;
-    const yearElementId = `book-year-${toSafeDomId(target)}-${entryDomKey}`;
-    const pageCountText = getPageCountLabel(entry);
-    const yearValue = getEntryYear(entry);
-    const yearText = yearValue ? `${yearValue}` : "";
-    const coverMarkup = entry.Image
-      ? `<img class="book-image" src="${escapeHtml(entry.Image)}" loading="lazy" alt="${safeName} cover" />`
-      : `<span class="cover-fallback">${getFallbackInitial(safeName)}</span>`;
-
-    parent.insertAdjacentHTML(
-      "beforeend",
-      `
-      <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="hypothesis book responsive w-inline-block">
-        <span class="book-rank">${formatRank(index)}</span>
-        <span id="${coverElementId}" class="book-cover">${coverMarkup}</span>
-        <div class="book-main">
-          <h4 class="idea-header book">${safeName}</h4>
-          <span class="author" title="${safeAuthor}">${safeAuthor}</span>
-          ${summaryMarkup}
-          <div class="book-meta">
-            <span class="source-pill">${getSourceLabel(normalizedLink)}</span>
-            <span id="${yearElementId}" class="page-pill year-pill${yearText ? "" : " is-hidden"}">${yearText}</span>
-            <span id="${pageElementId}" class="page-pill${pageCountText ? "" : " is-hidden"}">${pageCountText}</span>
-          </div>
-        </div>
-        <span class="open-link">Open <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
-      </a>`
-    );
-    wireCoverFallback(coverElementId, entry.Name || "Book");
-
-    if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
-      void hydrateEntryMetadata(entry, { coverElementId, pageElementId, yearElementId });
+      if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
+        void hydrateEntryMetadata(entry, { coverElementId, pageElementId, yearElementId });
+      }
+    } catch (error) {
+      console.warn("Skipping entry due render error", entry && entry.Name);
     }
   };
 
@@ -913,63 +972,67 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     allEntries.forEach((entry) => {
-      if (!entry || !entry.Name) {
-        return;
-      }
-
-      enrichEntryLinks(entry);
-      applySeededMetadata(entry);
-      const inferredYear = getEntryYear(entry);
-      if (!entry.Year && inferredYear) {
-        entry.Year = inferredYear;
-      }
-      const lookupKey = getTitleLookupKey(entry.Name);
-      if (!lookupKey) {
-        return;
-      }
-
-      if (!byLookupKey.has(lookupKey)) {
-        byLookupKey.set(lookupKey, entry);
-      } else {
-        const existingEntry = byLookupKey.get(lookupKey);
-        if (existingEntry) {
-          const shouldSwapPrimary =
-            getEntryQualityScore(entry) > getEntryQualityScore(existingEntry);
-          const primaryEntry = shouldSwapPrimary ? entry : existingEntry;
-          const secondaryEntry = shouldSwapPrimary ? existingEntry : entry;
-
-          if (!primaryEntry.Author && secondaryEntry.Author) {
-            primaryEntry.Author = secondaryEntry.Author;
-          }
-          if ((!primaryEntry.Link || !primaryEntry.Link.trim()) && secondaryEntry.Link) {
-            primaryEntry.Link = secondaryEntry.Link;
-          }
-          if ((!primaryEntry.Image || !primaryEntry.Image.trim()) && secondaryEntry.Image) {
-            primaryEntry.Image = secondaryEntry.Image;
-          }
-          if (!normalizePositiveInteger(primaryEntry.page_count) && normalizePositiveInteger(secondaryEntry.page_count)) {
-            primaryEntry.page_count = secondaryEntry.page_count;
-          }
-          if (!primaryEntry.Year && secondaryEntry.Year) {
-            primaryEntry.Year = secondaryEntry.Year;
-          }
-          if ((!primaryEntry.Summary || !primaryEntry.Summary.trim()) && secondaryEntry.Summary) {
-            primaryEntry.Summary = secondaryEntry.Summary;
-          }
-          if (!primaryEntry.Category && secondaryEntry.Category) {
-            primaryEntry.Category = secondaryEntry.Category;
-          }
-          if (!primaryEntry.Goodreads && secondaryEntry.Goodreads) {
-            primaryEntry.Goodreads = secondaryEntry.Goodreads;
-          }
-
-          byLookupKey.set(lookupKey, primaryEntry);
+      try {
+        if (!entry || !entry.Name) {
+          return;
         }
-      }
 
-      const categoryKey = (entry.Category || "").toString();
-      if (categoryKeysFromData[categoryKey]) {
-        categoryKeysFromData[categoryKey].add(lookupKey);
+        enrichEntryLinks(entry);
+        applySeededMetadata(entry);
+        const inferredYear = getEntryYear(entry);
+        if (!entry.Year && inferredYear) {
+          entry.Year = inferredYear;
+        }
+        const lookupKey = getTitleLookupKey(entry.Name);
+        if (!lookupKey || isEntryDisabledByGuardrails(entry, lookupKey)) {
+          return;
+        }
+
+        if (!byLookupKey.has(lookupKey)) {
+          byLookupKey.set(lookupKey, entry);
+        } else {
+          const existingEntry = byLookupKey.get(lookupKey);
+          if (existingEntry) {
+            const shouldSwapPrimary =
+              getEntryQualityScore(entry) > getEntryQualityScore(existingEntry);
+            const primaryEntry = shouldSwapPrimary ? entry : existingEntry;
+            const secondaryEntry = shouldSwapPrimary ? existingEntry : entry;
+
+            if (!primaryEntry.Author && secondaryEntry.Author) {
+              primaryEntry.Author = secondaryEntry.Author;
+            }
+            if ((!primaryEntry.Link || !primaryEntry.Link.trim()) && secondaryEntry.Link) {
+              primaryEntry.Link = secondaryEntry.Link;
+            }
+            if ((!primaryEntry.Image || !primaryEntry.Image.trim()) && secondaryEntry.Image) {
+              primaryEntry.Image = secondaryEntry.Image;
+            }
+            if (!normalizePositiveInteger(primaryEntry.page_count) && normalizePositiveInteger(secondaryEntry.page_count)) {
+              primaryEntry.page_count = secondaryEntry.page_count;
+            }
+            if (!primaryEntry.Year && secondaryEntry.Year) {
+              primaryEntry.Year = secondaryEntry.Year;
+            }
+            if ((!primaryEntry.Summary || !primaryEntry.Summary.trim()) && secondaryEntry.Summary) {
+              primaryEntry.Summary = secondaryEntry.Summary;
+            }
+            if (!primaryEntry.Category && secondaryEntry.Category) {
+              primaryEntry.Category = secondaryEntry.Category;
+            }
+            if (!primaryEntry.Goodreads && secondaryEntry.Goodreads) {
+              primaryEntry.Goodreads = secondaryEntry.Goodreads;
+            }
+
+            byLookupKey.set(lookupKey, primaryEntry);
+          }
+        }
+
+        const categoryKey = (entry.Category || "").toString();
+        if (categoryKeysFromData[categoryKey]) {
+          categoryKeysFromData[categoryKey].add(lookupKey);
+        }
+      } catch (error) {
+        console.warn("Skipping entry due data error", entry && entry.Name);
       }
     });
 
@@ -1019,35 +1082,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const sortMode = getSortMode();
 
     categoryTargets.forEach(({ key, parentId }) => {
-      const categoryParent = document.getElementById(parentId);
-      if (!categoryParent) {
-        return;
+      try {
+        const categoryParent = document.getElementById(parentId);
+        if (!categoryParent) {
+          return;
+        }
+        categoryParent.innerHTML = "";
+
+        const selectedLookupKeys = new Set();
+        (categoryBookNames[key] || []).forEach((name) => {
+          const lookupKey = getTitleLookupKey(name);
+          if (lookupKey) {
+            selectedLookupKeys.add(lookupKey);
+          }
+        });
+        (categoryKeysFromData[key] || new Set()).forEach((lookupKey) => {
+          if (lookupKey) {
+            selectedLookupKeys.add(lookupKey);
+          }
+        });
+
+        const selectedEntries = [...selectedLookupKeys]
+          .map((lookupKey) => entryLookup.get(lookupKey))
+          .filter(Boolean);
+
+        const orderedEntries = sortSelectedEntries(selectedEntries, sortMode);
+
+        orderedEntries.forEach((entry, index) => {
+          renderBook(entry, parentId, index);
+        });
+        renderBook(null, parentId, orderedEntries.length);
+      } catch (error) {
+        console.warn("Skipping category due render error", key);
       }
-      categoryParent.innerHTML = "";
-
-      const selectedLookupKeys = new Set();
-      (categoryBookNames[key] || []).forEach((name) => {
-        const lookupKey = getTitleLookupKey(name);
-        if (lookupKey) {
-          selectedLookupKeys.add(lookupKey);
-        }
-      });
-      (categoryKeysFromData[key] || new Set()).forEach((lookupKey) => {
-        if (lookupKey) {
-          selectedLookupKeys.add(lookupKey);
-        }
-      });
-
-      const selectedEntries = [...selectedLookupKeys]
-        .map((lookupKey) => entryLookup.get(lookupKey))
-        .filter(Boolean);
-
-      const orderedEntries = sortSelectedEntries(selectedEntries, sortMode);
-
-      orderedEntries.forEach((entry, index) => {
-        renderBook(entry, parentId, index);
-      });
-      renderBook(null, parentId, orderedEntries.length);
     });
   };
 
