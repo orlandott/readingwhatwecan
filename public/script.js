@@ -821,6 +821,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const readingTrackProgressElement = document.getElementById("reading-track-progress");
   const readingListPreviewElement = document.getElementById("reading-list-preview");
   let latestEntryLookup = new Map();
+  let latestEntryCategoryLookup = new Map();
+  let latestTrackTotals = new Map(
+    Object.keys(trackLabels).map((trackKey) => [trackKey, 0])
+  );
 
   const normalizeStoredTimestamp = (value = "") => {
     const timestamp = Date.parse(value.toString());
@@ -884,6 +888,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const getReadingListRecord = (lookupKey = "") =>
     (lookupKey && readingListState[lookupKey]) || null;
 
+  const resolveTrackCategory = (value = "") =>
+    validTrackKeys.has(value.toString()) ? value.toString() : "";
+
+  const getResolvedRecordCategory = (record = {}) =>
+    resolveTrackCategory(record.category || "") ||
+    resolveTrackCategory(latestEntryCategoryLookup.get(record.lookupKey) || "");
+
   const createReadingListRecordFromEntry = (lookupKey, entry, status = "") => {
     const existing = getReadingListRecord(lookupKey);
     const nowIso = new Date().toISOString();
@@ -912,8 +923,9 @@ document.addEventListener("DOMContentLoaded", () => {
       ),
       link: normalizedLink,
       category:
-        (entry && validTrackKeys.has((entry.Category || "").toString()) && entry.Category) ||
-        (existing && existing.category) ||
+        resolveTrackCategory(entry && entry.Category) ||
+        resolveTrackCategory(latestEntryCategoryLookup.get(lookupKey) || "") ||
+        resolveTrackCategory(existing && existing.category) ||
         "",
       year:
         (entry && getEntryYear(entry)) ||
@@ -969,16 +981,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const trackProgressMarkup = Object.entries(trackLabels)
       .map(([trackKey, trackLabel]) => {
-        const trackRecords = records.filter((record) => record.category === trackKey);
+        const trackTotal = normalizePositiveInteger(latestTrackTotals.get(trackKey) || 0) || 0;
+        const trackRecords = records.filter(
+          (record) => getResolvedRecordCategory(record) === trackKey
+        );
         const trackFinished = trackRecords.filter((record) => record.status === "finished").length;
-        const trackPercent = trackRecords.length
-          ? Math.round((trackFinished / trackRecords.length) * 100)
+        const trackPercent = trackTotal
+          ? Math.round((trackFinished / trackTotal) * 100)
           : 0;
         return `
           <div class="track-progress-item">
             <div class="track-progress-top">
               <span class="track-progress-label">${escapeHtml(trackLabel)}</span>
-              <span class="track-progress-count">${trackFinished}/${trackRecords.length || 0}</span>
+              <span class="track-progress-count">${trackFinished}/${trackTotal}</span>
             </div>
             <div class="track-progress-bar">
               <span class="track-progress-fill" style="width:${trackPercent}%"></span>
@@ -1834,19 +1849,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       return;
     }
-    renderReadingDashboard();
     const sortMode = getSortMode();
     const filterState = getFilterState();
     const usingFilters = hasActiveFilters(filterState);
+    const nextEntryCategoryLookup = new Map();
+    const nextTrackTotals = new Map(
+      Object.keys(trackLabels).map((trackKey) => [trackKey, 0])
+    );
 
     categoryTargets.forEach(({ key, parentId }) => {
       try {
-        const categoryParent = document.getElementById(parentId);
-        if (!categoryParent) {
-          return;
-        }
-        categoryParent.innerHTML = "";
-
         const selectedLookupKeys = new Set();
         (categoryBookNames[key] || []).forEach((name) => {
           const lookupKey = getTitleLookupKey(name);
@@ -1859,10 +1871,21 @@ document.addEventListener("DOMContentLoaded", () => {
             selectedLookupKeys.add(lookupKey);
           }
         });
+        const categoryParent = document.getElementById(parentId);
+        if (!categoryParent) {
+          return;
+        }
+        categoryParent.innerHTML = "";
 
         const selectedEntries = [...selectedLookupKeys]
           .map((lookupKey) => entryLookup.get(lookupKey))
           .filter(Boolean);
+        selectedLookupKeys.forEach((lookupKey) => {
+          if (lookupKey && entryLookup.has(lookupKey) && !nextEntryCategoryLookup.has(lookupKey)) {
+            nextEntryCategoryLookup.set(lookupKey, key);
+          }
+        });
+        nextTrackTotals.set(key, selectedEntries.length);
         const filteredEntries = selectedEntries.filter((entry) =>
           entryMatchesFilters(entry, filterState)
         );
@@ -1893,6 +1916,9 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
     });
+    latestEntryCategoryLookup = nextEntryCategoryLookup;
+    latestTrackTotals = nextTrackTotals;
+    renderReadingDashboard();
   };
 
   const suggestionForm = document.getElementById("book-suggestion-form");
