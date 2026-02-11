@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const panes = document.querySelectorAll(".w-tab-pane");
 
   const sourceLabels = [
-    { match: "goodreads.com", label: "Goodreads" },
+    { match: "goodreads.com", label: "Book" },
     { match: "amazon", label: "Amazon" },
     { match: ".pdf", label: "PDF" },
     { match: "lesswrong", label: "LessWrong" },
