@@ -56,6 +56,20 @@
           <a data-w-tab="problem-space" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Problem Space</a>
           <a data-w-tab="technical-frontier" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Technical Frontier</a>
           <a data-w-tab="speculative-fiction" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">Speculative Fiction</a>
+          <div class="reading-dashboard" role="region" aria-label="Your reading list and progress">
+            <details id="reading-list-collapsible" class="reading-dashboard-collapsible" open>
+              <summary class="reading-dashboard-toggle">
+                <span class="reading-dashboard-title">Your reading list</span>
+                <span id="reading-list-summary" class="reading-dashboard-summary">
+                  Save resources to track progress.
+                </span>
+              </summary>
+              <div class="reading-dashboard-body">
+                <div id="reading-track-progress" class="reading-track-progress" aria-live="polite"></div>
+                <div id="reading-list-preview" class="reading-list-preview" aria-live="polite"></div>
+              </div>
+            </details>
+          </div>
         </div>
         <div class="w-tab-content w-full md:w-3/4">
           <div class="category-controls" role="region" aria-label="Category sorting and filtering">
@@ -95,16 +109,6 @@
             <button id="category-filter-reset" type="button" class="category-filter-reset">
               Reset filters
             </button>
-          </div>
-          <div class="reading-dashboard" role="region" aria-label="Your reading list and progress">
-            <div class="reading-dashboard-header">
-              <h3 class="reading-dashboard-title">Your reading list</h3>
-              <p id="reading-list-summary" class="reading-dashboard-summary">
-                Save resources to track progress.
-              </p>
-            </div>
-            <div id="reading-track-progress" class="reading-track-progress" aria-live="polite"></div>
-            <ul id="reading-list-preview" class="reading-list-preview" aria-live="polite"></ul>
           </div>
           <div data-w-tab="entry-point" class="w-tab-pane w--tab-active">
             <div class="category-intro">

@@ -968,6 +968,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!readingListSummaryElement || !readingTrackProgressElement || !readingListPreviewElement) {
       return;
     }
+    const priorSectionOpenState = {};
+    readingListPreviewElement
+      .querySelectorAll("details[data-reading-track]")
+      .forEach((sectionElement) => {
+        const trackKey = (sectionElement.getAttribute("data-reading-track") || "").trim();
+        if (trackKey) {
+          priorSectionOpenState[trackKey] = Boolean(sectionElement.open);
+        }
+      });
 
     const records = getSortedReadingListRecords();
     const totalSaved = records.length;
@@ -1006,39 +1015,79 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!records.length) {
       readingListPreviewElement.innerHTML = `
-        <li class="reading-list-empty">
+        <p class="reading-list-empty">
           No saved resources yet. Use the Save button on any resource card.
-        </li>
+        </p>
       `;
       return;
     }
 
-    readingListPreviewElement.innerHTML = records
-      .slice(0, 10)
-      .map((record) => {
-        const safeName = escapeHtml(record.name || "Untitled");
-        const safeAuthor = escapeHtml(record.author || "Unknown author");
-        const safeLink = escapeHtml(record.link || "#");
-        const safeLookupKey = escapeHtml(record.lookupKey || "");
-        const progressMarkup = getProgressOptionsMarkup(record.status || "");
+    const sectionsMarkup = Object.entries(trackLabels)
+      .map(([trackKey, trackLabel]) => {
+        const safeTrackKey = escapeHtml(trackKey);
+        const safeTrackLabel = escapeHtml(trackLabel);
+        const trackTotal = normalizePositiveInteger(latestTrackTotals.get(trackKey) || 0) || 0;
+        const trackRecords = records.filter(
+          (record) => getResolvedRecordCategory(record) === trackKey
+        );
+        const trackFinished = trackRecords.filter((record) => record.status === "finished").length;
+        const trackPercent = trackTotal
+          ? Math.round((trackFinished / trackTotal) * 100)
+          : 0;
+        const isSectionOpen = Object.prototype.hasOwnProperty.call(priorSectionOpenState, trackKey)
+          ? priorSectionOpenState[trackKey]
+          : trackRecords.length > 0;
+
+        const sectionContentMarkup = trackRecords.length
+          ? `
+            <ul class="reading-list-items">
+              ${trackRecords
+                .map((record) => {
+                  const safeName = escapeHtml(record.name || "Untitled");
+                  const safeAuthor = escapeHtml(record.author || "Unknown author");
+                  const safeLink = escapeHtml(record.link || "#");
+                  const safeLookupKey = escapeHtml(record.lookupKey || "");
+                  const progressMarkup = getProgressOptionsMarkup(record.status || "");
+                  return `
+                    <li class="reading-list-item">
+                      <div class="reading-list-item-main">
+                        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="reading-list-item-link">${safeName}</a>
+                        <span class="reading-list-item-meta">${safeAuthor}</span>
+                      </div>
+                      <div class="reading-list-item-actions">
+                        <select class="reading-list-status-select" data-dashboard-progress-select="${safeLookupKey}" aria-label="Progress for ${safeName}">
+                          ${progressMarkup}
+                        </select>
+                        <button type="button" class="reading-list-remove" data-reading-remove-key="${safeLookupKey}">
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  `;
+                })
+                .join("")}
+            </ul>
+          `
+          : `<p class="reading-section-empty">No saved resources in this track yet.</p>`;
+
         return `
-          <li class="reading-list-item">
-            <div class="reading-list-item-main">
-              <a href="${safeLink}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" class="reading-list-item-link">${safeName}</a>
-              <span class="reading-list-item-meta">${safeAuthor}</span>
+          <details class="reading-section" data-reading-track="${safeTrackKey}"${isSectionOpen ? " open" : ""}>
+            <summary class="reading-section-summary">
+              <span class="reading-section-name">${safeTrackLabel}</span>
+              <span class="reading-section-count">${trackFinished}/${trackTotal}</span>
+            </summary>
+            <div class="reading-section-progress">
+              <div class="track-progress-bar">
+                <span class="track-progress-fill" style="width:${trackPercent}%"></span>
+              </div>
             </div>
-            <div class="reading-list-item-actions">
-              <select class="reading-list-status-select" data-dashboard-progress-select="${safeLookupKey}" aria-label="Progress for ${safeName}">
-                ${progressMarkup}
-              </select>
-              <button type="button" class="reading-list-remove" data-reading-remove-key="${safeLookupKey}">
-                Remove
-              </button>
-            </div>
-          </li>
+            ${sectionContentMarkup}
+          </details>
         `;
       })
       .join("");
+
+    readingListPreviewElement.innerHTML = sectionsMarkup;
   };
   const disabledTitleKeys = new Set(
     resourceGuardrails.disabledTitles
