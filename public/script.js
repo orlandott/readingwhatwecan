@@ -183,9 +183,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const snippet = createSnippet(data);
-      const issueTitle = `[Suggestion] ${data.name}`;
-      const issueBody = [
-        "## Suggested reading option",
+      const emailSubject = `[RWWC Suggestion] ${data.name}`;
+      const emailBody = [
+        "Hi Reading What We Can team,",
+        "",
+        "I'd like to suggest a new reading option:",
         "",
         `- Title: ${data.name}`,
         `- Author: ${data.author}`,
@@ -197,11 +199,13 @@ document.addEventListener("DOMContentLoaded", () => {
         "```js",
         snippet,
         "```",
+        "",
+        "Thanks!",
       ].join("\n");
-      const issueUrl = `https://github.com/apartresearch/readingwhatwecan/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
+      const mailtoUrl = `mailto:esben@apartresearch.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
-      window.open(issueUrl, "_blank", "noopener,noreferrer");
-      setFeedback("Opened a pre-filled GitHub suggestion in a new tab.");
+      window.location.href = mailtoUrl;
+      setFeedback("Opened your email app with a pre-filled suggestion draft.");
     });
   }
 
@@ -217,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await copyText(createSnippet(data));
         setFeedback("Copied books.js snippet to clipboard.");
       } catch (error) {
-        setFeedback("Could not copy snippet automatically. Please submit through GitHub draft.");
+        setFeedback("Could not copy snippet automatically. You can still send the email draft.");
       }
     });
   }
