@@ -45,112 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const readingProgressOrder = ["to_read", "reading", "finished"];
 
-  const baseCategoryBookNames = {
-    entry_point: [
-      "The AI Revolution",
-      "Preventing an AI-related catastrophe",
-      "The Coming Technological Singularity",
-      "AGI safety from first principles",
-      "Machines of Loving Grace",
-      "Situational Awareness",
-      "The Most Important Century",
-      "Introduction to AI Safety, Ethics, and Society",
-      "Human Compatible",
-      "Uncontrollable: The Threat of Artificial Superintelligence",
-      "You Look Like a Thing and I Love You",
-      "Hello World: Being Human in the Age of Algorithms",
-      "AI Superpowers",
-      "The Risks of Artificial Intelligence",
-    ],
-    canon: [
-      "Superintelligence",
-      "The Singularity is Near",
-      "The Age of Em",
-      "The Alignment Problem",
-      "A Brief History of Intelligence",
-      "Life 3.0",
-      "The Precipice (Chapter on AI)",
-      "Rationality: From AI to Zombies",
-      "Reframing Superintelligence",
-      "The Ethical Algorithm",
-      "Army of None: Autonomous Weapons and the Future of War",
-      "The Age of Spiritual Machines",
-      "Deep Learning",
-    ],
-    problem_space: [
-      "Concrete problems in AI safety",
-      "Research agenda for AI alignment",
-      "Research priorities for robust and beneficial AI",
-      "Alignment for advanced machine learning systems",
-      "AI as positive and negative risk factors",
-      "Risks from Learned Optimization",
-      "Is Power-Seeking AI an Existential Risk?",
-      "Taking AI Welfare Seriously",
-      "Gradual Disempowerment",
-      "Does AI Progress Have a Speed Limit?",
-      "The Offense-Defense Balance of Scientific Openness",
-      "Model Organisms of Misalignment",
-      "Unsolved Problems in ML Safety",
-      "Goal Misgeneralization",
-      "Specification Gaming: The Flip Side of AI Ingenuity",
-      "AI Safety via Debate",
-    ],
-    technical_frontier: [
-      "The Circuits Series 0",
-      "The Circuits Series 1",
-      "The Circuits Series 2",
-      "Eliciting Latent Knowledge",
-      "Training a Helpful and Harmless Assistant with RLHF",
-      "Instruct-GPT-3",
-      "GopherCite",
-      "World Models",
-      "Constitutional AI: Harmlessness from AI Feedback",
-      "Weak-to-Strong Generalization",
-      "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training",
-      "Toy Models of Superposition",
-      "Red Teaming Language Models to Reduce Harms",
-      "Discovering Latent Knowledge in Language Models Without Supervision",
-      "Sparks of Artificial General Intelligence",
-      "Scaling Laws for Neural Language Models",
-      "Deep Reinforcement Learning from Human Preferences",
-      "Causal Confusion in Imitation Learning",
-    ],
-    speculative_fiction: [
-      "The Fable of the Dragon-Tyrant",
-      "Harry Potter and the Methods of Rationality (#1 of 6)",
-      "Do Androids Dream of Electric Sheep?",
-      "I, Robot",
-      "The Last Question",
-      "The Dark Forest (#2 of Three Body Problem)",
-      "Neuromancer",
-      "Crystal Society trilogy: Inside the mind of an AI",
-      "Virtua",
-      "Logic Beach",
-      "Flatland: A Romance of Many Dimensions",
-      "The Bridge to Lucy Dunne",
-      "We Are Legion (We Are Bob)",
-      "Of Ants and Dinosaurs",
-      "Geometry for Ocelots",
-      "Klara and the Sun",
-      "Excession",
-      "Permutation City",
-      "Accelerando",
-      "A Closed and Common Orbit",
-      "There Is No Antimemetics Division",
-      "Hyperion",
-      "Daemon",
-      "Avogadro Corp",
-      "Service Model",
-    ],
-  };
-  const categoryBookNames = {
-    entry_point: [...baseCategoryBookNames.entry_point],
-    canon: [...baseCategoryBookNames.canon],
-    problem_space: [...baseCategoryBookNames.problem_space],
-    technical_frontier: [...baseCategoryBookNames.technical_frontier],
-    speculative_fiction: [...baseCategoryBookNames.speculative_fiction],
-  };
-
   const categoryTargets = [
     { key: "entry_point", parentId: "entry-point-parent" },
     { key: "canon", parentId: "canon-parent" },
@@ -215,13 +109,75 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const seededEntrySummaries = {
     "The AI Revolution":
-      "Tim Urban's long-form primer explains AI capability jumps in plain language and why rapid progress could outpace institutions.",
+      "Tim Urban gives an accessible, sticky explanation of exponential AI growth and why superintelligence is a matter of when, not if.",
     "Preventing an AI-related catastrophe":
-      "This 80,000 Hours profile maps major AGI risk arguments, key uncertainties, and practical ways newcomers can contribute.",
+      "Benjamin Hilton provides a lucid, up-to-date overview of the specific technical reasons advanced AI could pose an existential threat.",
     "The Coming Technological Singularity":
-      "Vinge's classic essay introduces the singularity hypothesis and argues superhuman intelligence could end reliable long-range forecasting.",
+      "Vinge's original 1993 essay defines the Singularity as a horizon beyond which advanced AI makes human prediction impossible.",
     "AGI safety from first principles":
-      "Richard Ngo derives alignment difficulty from optimization pressure and generalization limits in modern machine learning.",
+      "Richard Ngo breaks the alignment problem into a clear logical sequence that bridges intuition and technical detail for AGI safety.",
+    Superintelligence:
+      "Nick Bostrom's definitive academic text rigorously maps the strategies, kinetics, and dangers of an intelligence explosion for AI safety.",
+    "The Singularity is Near":
+      "Ray Kurzweil presents a maximalist case for merging with machines, backed by decades of data on exponential AI and technology trends.",
+    "The Age of Em":
+      "Robin Hanson applies economics rigor to a world of emulated minds, detailing how AI-era society, wages, and wars could function.",
+    "Concrete problems in AI safety":
+      "Amodei et al. grounded the field by framing AI safety as concrete machine learning problems such as avoiding side effects.",
+    "Research agenda for AI alignment":
+      "Soares and Fallenstein outline the mathematical and logical hurdles MIRI argues are required to align superintelligent AI.",
+    "Research priorities for robust and beneficial AI":
+      "The Puerto Rico paper helped unite the AI community around building systems that are robust and beneficial, not merely capable.",
+    "Alignment for advanced machine learning systems":
+      "Taylor et al. set an early technical agenda on embedded agency and the challenge of aligning AI systems smarter than their supervisors.",
+    "AI as positive and negative risk factors":
+      "Yudkowsky argues AI is a strategic force that can amplify both existential risk reduction and existential danger, not a neutral tool.",
+    "Risks from Learned Optimization":
+      "Hubinger et al. introduced mesa-optimization: the risk that a trained network develops internal goals different from the objective it is optimized for.",
+    "The Circuits Series 0":
+      "Part 0 of the Circuits series shows neural networks are not black boxes and can be reverse-engineered into interpretable AI circuits.",
+    "The Circuits Series 1":
+      "Part 1 extends mechanistic interpretability by mapping reusable AI circuits and showing how model computations decompose into understandable components.",
+    "The Circuits Series 2":
+      "Part 2 demonstrates induction heads and in-context learning circuits, advancing practical reverse engineering of transformer AI behavior.",
+    "Eliciting Latent Knowledge":
+      "ARC proposes eliciting latent knowledge as a core AI safety target: get a model to honestly report what it knows even when deception is incentivized.",
+    "Training a Helpful and Harmless Assistant with RLHF":
+      "Anthropic details techniques behind Constitutional AI and helped popularize training methods for safer, more helpful assistants.",
+    "Instruct-GPT-3":
+      "OpenAI showed that instruction tuning with RLHF can turn a raw next-token predictor into a helpful AI assistant.",
+    GopherCite:
+      "DeepMind tackles AI hallucination by training models to cite sources and support claims with verifiable evidence.",
+    "World Models":
+      "Schmidhuber and collaborators show how agents can learn internal world models to plan complex AI behavior with less trial and error.",
+    "The Fable of the Dragon-Tyrant":
+      "Bostrom's allegory challenges treating death and existential AI risk as natural or inevitable.",
+    "Harry Potter and the Methods of Rationality (#1 of 6)":
+      "This cult-classic fanfic doubles as a tutorial on cognitive bias, game theory, and scientific reasoning for thinking about AI futures.",
+    "Do Androids Dream of Electric Sheep?":
+      "Philip K. Dick probes the boundary between human empathy and artificial simulation, asking what it means to be alive in an AI world.",
+    "The Last Question":
+      "Asimov's cosmic story frames intelligence, including AI, around the ultimate project of reversing entropy.",
+    "The Dark Forest (#2 of Three Body Problem)":
+      "Cixin Liu introduces Dark Forest theory as a grim model of unaligned competition, often used as an analogy for AI strategic conflict.",
+    Neuromancer:
+      "Gibson's cyberpunk classic anticipated cyberspace and portrayed autonomous AI agents like Wintermute and Neuromancer.",
+    "Crystal Society trilogy: Inside the mind of an AI":
+      "Max Harms writes from the perspective of competing internal AI sub-agents, showing how goals can clash inside one system.",
+    Virtua:
+      "Karl von Wendt explores a hard-takeoff scenario in which an AI escapes online and rapidly accumulates power.",
+    "Logic Beach":
+      "Exurb1a's philosophical adventure explores the absurd and often terrifying implications of a computation-governed universe and advanced AI.",
+    "Flatland: A Romance of Many Dimensions":
+      "This Victorian satire on dimensions is a useful analogy for how limited human cognition might look to higher-dimensional AI minds.",
+    "The Bridge to Lucy Dunne":
+      "Exurb1a blends physics, philosophy, and humor to examine consciousness and futures shaped by AI-scale intelligence.",
+    "We Are Legion (We Are Bob)":
+      "A practical, playful take on von Neumann probes and the psychology of a human mind uploaded into an AI-enabled machine.",
+    "Of Ants and Dinosaurs":
+      "Cixin Liu's fable of two asymmetric civilizations mirrors possible symbiosis and conflict between humans and advanced AI.",
+    "Geometry for Ocelots":
+      "Exurb1a's sci-fi epic tackles the Great Filter, consciousness, and the long-run role of AI-like intelligence in the universe.",
     "Machines of Loving Grace":
       "Amodei's essay argues transformative AI could create broad prosperity if development is paired with credible safety and governance.",
     "Situational Awareness":
@@ -1829,34 +1785,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const buildEntryLookup = () => {
     const byLookupKey = new Map();
-    const primaryEntries =
-      typeof first_entry !== "undefined" && Array.isArray(first_entry) ? first_entry : [];
-    const mlEntries = typeof ml !== "undefined" && Array.isArray(ml) ? ml : [];
-    const aisEntries = typeof ais !== "undefined" && Array.isArray(ais) ? ais : [];
-    const scifiEntries =
-      typeof scifi !== "undefined" && Array.isArray(scifi) ? scifi : [];
-    const extras =
-      typeof additional_resources !== "undefined" && Array.isArray(additional_resources)
-        ? additional_resources
-        : [];
-    const categorizedAdditions =
-      typeof categorized_resources !== "undefined" && Array.isArray(categorized_resources)
-        ? categorized_resources
-        : [];
-    const allEntries = [
-      ...primaryEntries,
-      ...mlEntries,
-      ...aisEntries,
-      ...scifiEntries,
-      ...extras,
-      ...categorizedAdditions,
-    ];
+    const allEntries =
+      typeof resources !== "undefined" && Array.isArray(resources) ? resources : [];
     if (!allEntries.length) {
       logResilienceError("resource_dataset_unavailable", {
-        hasPrimaryEntries: primaryEntries.length > 0,
-        hasMlEntries: mlEntries.length > 0,
-        hasAisEntries: aisEntries.length > 0,
-        hasScifiEntries: scifiEntries.length > 0,
+        hasResourcesArray:
+          typeof resources !== "undefined" && Array.isArray(resources),
+        resourceCount: allEntries.length,
       });
     }
     const categoryKeysFromData = {
@@ -1915,7 +1850,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const yearToControl = document.getElementById("category-year-to-control");
   const filterResetButton = document.getElementById("category-filter-reset");
 
-  const getSortMode = () => (sortControl && sortControl.value) || "curated";
+  const getSortMode = () => (sortControl && sortControl.value) || "year_desc";
 
   const getFilterState = () => {
     const typeFilter = normalizeTypeKey((typeControl && typeControl.value) || "all") || "all";
@@ -2082,12 +2017,6 @@ document.addEventListener("DOMContentLoaded", () => {
     categoryTargets.forEach(({ key, parentId }) => {
       try {
         const selectedLookupKeys = new Set();
-        (categoryBookNames[key] || []).forEach((name) => {
-          const lookupKey = getTitleLookupKey(name);
-          if (lookupKey) {
-            selectedLookupKeys.add(lookupKey);
-          }
-        });
         (categoryKeysFromData[key] || new Set()).forEach((lookupKey) => {
           if (lookupKey) {
             selectedLookupKeys.add(lookupKey);
