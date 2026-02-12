@@ -560,6 +560,12 @@ body.site-body {
   object-fit: cover;
 }
 
+.book-image.is-logo {
+  object-fit: contain;
+  padding: 6px;
+  background: #fff;
+}
+
 .cover-fallback {
   width: 100%;
   height: 100%;

@@ -193,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const seededEntryMetadata = {
     "The AI Revolution": {
       Image:
-        "https://commons.wikimedia.org/wiki/Special:FilePath/Tim%20Urban%20%28blogger%29.jpg",
+        "https://covers.openlibrary.org/b/isbn/9780593237380-L.jpg",
     },
     "The Coming Technological Singularity": {
       Image:
@@ -946,6 +946,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (preferredLogo) {
       // Prefer explicit organization logos for these sources over fetched covers.
       entry.Image = preferredLogo;
+      entry.__coverIsLogo = true;
+    } else {
+      entry.__coverIsLogo = false;
     }
     entry.Image = sanitizeImageUrl(entry.Image || "");
     const inferredYear = getEntryYear(entry);
@@ -1711,8 +1714,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const pageCountText = getPageCountLabel(entry);
       const yearValue = getEntryYear(entry);
       const yearText = yearValue ? `${yearValue}` : "";
+      const coverClassName = `book-image${entry.__coverIsLogo ? " is-logo" : ""}`;
       const coverMarkup = safeImageUrl
-        ? `<img class="book-image" src="${escapeHtml(safeImageUrl)}" loading="lazy" alt="${safeName} cover" />`
+        ? `<img class="${coverClassName}" src="${escapeHtml(safeImageUrl)}" loading="lazy" alt="${safeName} cover" />`
         : `<span class="cover-fallback">${getFallbackInitial(entry.Name || "")}</span>`;
 
       parent.insertAdjacentHTML(
