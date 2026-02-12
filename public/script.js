@@ -702,7 +702,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "https://commons.wikimedia.org/wiki/Special:FilePath/OpenAI_logo_2025.svg",
     deepmind:
       "https://commons.wikimedia.org/wiki/Special:FilePath/DeepMind_new_logo.svg",
-    miri: "https://intelligence.org/favicon.ico",
+    miri: "https://intelligence.org/wp-content/uploads/2024/10/Group-47.svg",
     slatestarcodex: "https://slatestarcodex.com/favicon.ico",
   };
 
@@ -939,17 +939,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${subject} is useful for AI safety because ${getSummaryReasonForEntry(entry)}.`;
   };
 
-  const normalizeSummaryToOneSentence = (summary = "", entry = {}) => {
-    const rawSummary = normalizeStringInput(summary || buildFallbackSummary(entry));
+  const normalizeSummaryToOneSentence = (summary = "") => {
+    const rawSummary = normalizeStringInput(summary);
     if (!rawSummary) {
       return "";
     }
     const firstSentenceMatch = rawSummary.match(/[^.!?]+[.!?]?/);
     let normalizedSummary = (firstSentenceMatch ? firstSentenceMatch[0] : rawSummary).trim();
-    if (!/(ai|alignment|safety|agi)/i.test(normalizedSummary)) {
-      const strippedSummary = normalizedSummary.replace(/[.!?]+$/, "");
-      normalizedSummary = `${strippedSummary} for understanding AI safety trade-offs.`;
-    }
     if (!/[.!?]$/.test(normalizedSummary)) {
       normalizedSummary += ".";
     }
@@ -1035,6 +1031,17 @@ document.addEventListener("DOMContentLoaded", () => {
     entry.__disableImage = titlesWithDisabledCovers.has(entry.Name || "");
     if (entry.__disableImage) {
       entry.Image = "";
+    }
+    const sourceType = getSourceLabel(getEntryPrimaryLink(entry));
+    const preferredPortrait = getVerifiedAuthorPortraitFallback(entry.Author || "");
+    if (
+      !entry.Image &&
+      preferredPortrait &&
+      sourceType !== "Book" &&
+      !entry.__disableImage
+    ) {
+      // For essays/papers with known authors, prefer a reliable portrait over noisy metadata covers.
+      entry.Image = preferredPortrait;
     }
     const preferredLogo = getPreferredOrganizationLogoFallback(entry);
     if (preferredLogo && !entry.__disableImage) {
