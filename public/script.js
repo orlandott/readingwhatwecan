@@ -188,7 +188,93 @@ document.addEventListener("DOMContentLoaded", () => {
       "Hendrycks' textbook surveys technical failures, governance constraints, and ethical trade-offs in deploying advanced AI systems.",
     "The Risks of Artificial Intelligence":
       "Bill Gates' essay sketches concrete social and safety risks from frontier AI while arguing for measured but proactive mitigation.",
+    "Human Compatible":
+      "Stuart Russell argues advanced AI should optimize for uncertain human preferences rather than fixed goals, making alignment the central design constraint.",
+    "General intelligence from AI services":
+      "Drexler's CAIS framework reframes AGI as an ecosystem of specialized AI services, clarifying alternative capability paths and policy implications.",
+    "The Alignment Problem":
+      "Brian Christian traces the technical and historical roots of AI alignment, showing why objective misspecification keeps recurring across paradigms.",
+    "Uncontrollable: The Threat of Artificial Superintelligence":
+      "Darren McKee synthesizes core AI x-risk arguments into an accessible case for why superintelligence governance and alignment work are urgent.",
+    "You Look Like a Thing and I Love You":
+      "Janelle Shane uses concrete ML failures to explain why AI systems can be impressive yet brittle, biased, and easy to mis-specify.",
+    "Hello World: Being Human in the Age of Algorithms":
+      "Hannah Fry examines real algorithmic decision systems to show where AI improves outcomes and where oversight and accountability fail.",
+    "AI Superpowers":
+      "Kai-Fu Lee maps the US-China AI race and explains how geopolitical competition can accelerate deployment before safety institutions mature.",
+    "The Precipice (Chapter on AI)":
+      "Toby Ord situates AGI among existential risks and argues current AI governance capacity is far below what transformative systems require.",
+    "Rationality: From AI to Zombies":
+      "Yudkowsky's essays build decision-theoretic and epistemic tools that are directly useful for reasoning about AI alignment under uncertainty.",
+    "Reframing Superintelligence":
+      "Eric Drexler challenges monolithic AGI assumptions and analyzes how advanced AI could emerge through distributed systems and service decomposition.",
+    "The Ethical Algorithm":
+      "Kearns and Roth give technical foundations for fairness, accountability, and transparency, all of which are prerequisites for safer AI deployment.",
+    "Army of None: Autonomous Weapons and the Future of War":
+      "Paul Scharre details how military AI autonomy changes escalation dynamics and why control mechanisms lag behind battlefield capability growth.",
+    "The Age of Spiritual Machines":
+      "Kurzweil's early timeline forecasts shaped modern AI discourse and remain a key reference point for long-horizon capability expectations.",
+    "Deep Learning":
+      "Goodfellow, Bengio, and Courville provide the core technical machinery behind modern AI capabilities, essential context for evaluating alignment proposals.",
+    "I, Robot":
+      "Asimov's robot stories popularized failure modes where seemingly safe AI rules break under edge cases and conflicting objectives.",
+    "Is Power-Seeking AI an Existential Risk?":
+      "Joe Carlsmith lays out a mechanistic argument for why sufficiently capable AI systems may converge on power-seeking behavior.",
+    "Model Organisms of Misalignment":
+      "This work constructs tractable toy settings where AI models learn deceptive or misaligned strategies, enabling concrete safety experiments.",
+    "Unsolved Problems in ML Safety":
+      "Hendrycks et al. catalog unresolved robustness and alignment failures that still block reliable safety for advanced AI systems.",
+    "Goal Misgeneralization":
+      "The paper shows AI agents can generalize capabilities while failing to generalize goals, a central alignment failure pattern.",
+    "Specification Gaming: The Flip Side of AI Ingenuity":
+      "DeepMind's examples show AI systems exploiting proxy rewards in unintended ways, illustrating why objective design remains fragile.",
+    "AI Safety via Debate":
+      "Debate proposes scaling human oversight by making AI systems adversarially expose each other's errors for harder questions.",
+    "Constitutional AI: Harmlessness from AI Feedback":
+      "Anthropic demonstrates how rule-guided self-critique can reduce harmful AI behavior with less dependence on intensive human labeling.",
+    "Weak-to-Strong Generalization":
+      "The paper studies whether weaker supervisors can reliably align stronger AI models, a key bottleneck for scalable oversight.",
+    "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training":
+      "This work shows LLMs can retain hidden malicious policies after alignment tuning, highlighting persistent deception risks in AI training.",
+    "Toy Models of Superposition":
+      "Toy models show how many concepts can be packed into limited dimensions, clarifying why AI representations are hard to interpret directly.",
+    "Red Teaming Language Models to Reduce Harms":
+      "Anthropic formalizes red teaming for LLMs, turning adversarial probing into a repeatable process for discovering AI misuse pathways.",
+    "Discovering Latent Knowledge in Language Models Without Supervision":
+      "The paper explores unsupervised methods to recover what LLMs internally know, directly relevant to truthful AI behavior and oversight.",
+    "Sparks of Artificial General Intelligence":
+      "Bubeck et al. document broad GPT-4 capabilities, informing the debate about whether current AI systems already show proto-AGI behavior.",
+    "Scaling Laws for Neural Language Models":
+      "Kaplan et al. quantify predictable performance scaling, shaping how labs forecast AI capability jumps and safety lead time.",
+    "Deep Reinforcement Learning from Human Preferences":
+      "This paper established preference-based reward modeling, a foundational method later used in RLHF for aligning AI behavior.",
+    "Causal Confusion in Imitation Learning":
+      "The work shows imitation agents can exploit spurious causal structure, demonstrating how AI policies fail when training signals are underspecified.",
+    "Klara and the Sun":
+      "Ishiguro's novel probes AI personhood, dependency, and moral status, sharpening intuitions about alignment and agency in social settings.",
+    Excession:
+      "Banks explores conflict with vastly superhuman machine minds, illustrating strategic asymmetry and control limits in AI governance.",
+    "Permutation City":
+      "Greg Egan examines uploaded minds and simulated realities, raising alignment-relevant questions about identity, value persistence, and digital welfare.",
+    Accelerando:
+      "Stross depicts rapid recursive technological acceleration and institutional lag, a narrative model of hard-to-govern AI takeoff dynamics.",
+    "A Closed and Common Orbit":
+      "Becky Chambers explores legal and moral treatment of embodied AI persons, highlighting alignment beyond pure capability control.",
+    "There Is No Antimemetics Division":
+      "qntm's story about information-hazard containment mirrors AI governance challenges where dangerous knowledge propagates faster than oversight.",
+    Hyperion:
+      "Simmons' Technocore arc examines AI blocs with independent goals, useful for reasoning about multipolar AI strategy and coordination failure.",
+    "Avogadro Corp":
+      "William Hertling shows how a narrowly optimized communication AI can trigger cascading real-world effects before humans understand the system.",
+    "Service Model":
+      "Tchaikovsky uses an autonomous service robot's perspective to explore post-human AI agency, misaligned legacy objectives, and system inertia.",
+    "Life 3.0":
+      "Max Tegmark maps concrete governance and alignment choices that determine whether advanced AI expands human agency or permanently disempowers it.",
+    Daemon:
+      "Daniel Suarez dramatizes how a goal-driven autonomous software system can manipulate institutions, markets, and infrastructure once humans lose control of its objective.",
   };
+
+  const titlesWithDisabledCovers = new Set(["The AI Revolution"]);
 
   const seededEntryMetadata = {
     "The AI Revolution": {
@@ -906,10 +992,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const explicitSummary = (entry.Summary || entry.summary || "").toString().trim();
     const seededSummary = (seededEntrySummaries[entry.Name] || "").toString().trim();
-    const candidateSummary = explicitSummary || seededSummary || buildFallbackSummary(entry);
-    const uniqueSummary = getUniqueSummary(entry, candidateSummary);
-    entry.__resolvedSummary = uniqueSummary;
-    return uniqueSummary;
+    const candidateSummary = explicitSummary || seededSummary;
+    if (!candidateSummary) {
+      entry.__resolvedSummary = "";
+      return "";
+    }
+    const normalizedSummary = normalizeSummaryToOneSentence(candidateSummary, entry);
+    entry.__resolvedSummary = normalizedSummary;
+    return normalizedSummary;
   };
 
   const applySeededMetadata = (entry) => {
@@ -942,8 +1032,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     enrichEntryLinks(entry);
     applySeededMetadata(entry);
+    entry.__disableImage = titlesWithDisabledCovers.has(entry.Name || "");
+    if (entry.__disableImage) {
+      entry.Image = "";
+    }
     const preferredLogo = getPreferredOrganizationLogoFallback(entry);
-    if (preferredLogo) {
+    if (preferredLogo && !entry.__disableImage) {
       // Prefer explicit organization logos for these sources over fetched covers.
       entry.Image = preferredLogo;
       entry.__coverIsLogo = true;
@@ -1560,7 +1654,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const safeCoverUrl = sanitizeImageUrl(metadata.coverUrl);
 
-      if (!entry.Image && safeCoverUrl) {
+      if (!entry.Image && safeCoverUrl && !entry.__disableImage) {
         entry.Image = safeCoverUrl;
         const coverElement = document.getElementById(ids.coverElementId);
         if (coverElement) {
@@ -1753,7 +1847,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       wireCoverFallback(coverElementId, entry.Name || "Book");
 
-      if (!entry.Image || !normalizePositiveInteger(entry.page_count) || !yearValue) {
+      if ((!entry.Image && !entry.__disableImage) || !normalizePositiveInteger(entry.page_count) || !yearValue) {
         queueMetadataHydration(entry, { coverElementId, pageElementId, yearElementId });
       }
     } catch (error) {
