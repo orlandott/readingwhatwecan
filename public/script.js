@@ -261,6 +261,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "Life 3.0": {
       Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
     },
+    "Human Compatible": {
+      Image: "https://covers.openlibrary.org/b/isbn/9780525558613-L.jpg",
+    },
     "The Precipice (Chapter on AI)": {
       Image: "https://covers.openlibrary.org/b/id/9338949-L.jpg",
     },
@@ -292,7 +295,10 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/8086288-L.jpg",
     },
     "I, Robot": {
-      Image: "https://covers.openlibrary.org/b/id/752299-L.jpg",
+      Image: "https://covers.openlibrary.org/b/isbn/9780553382563-L.jpg",
+    },
+    "Do Androids Dream of Electric Sheep?": {
+      Image: "https://covers.openlibrary.org/b/isbn/9780345404473-L.jpg",
     },
     "Gödel, Escher, Bach": {
       Image: "https://covers.openlibrary.org/b/id/14368453-L.jpg",
