@@ -250,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
       Year: 2024,
     },
     "Artificial Intelligence: A Guide for Thinking Humans": {
-      Image: "https://covers.openlibrary.org/b/isbn/9780374715236-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1559680391i/43565360.jpg",
       page_count: 209,
       Year: 2019,
     },
@@ -264,15 +264,15 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/9338949-L.jpg",
     },
     "Rationality: From AI to Zombies": {
-      Image: "https://books.google.com/books/content?id=9Zlx0WWuTj8C&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1440562023i/25131230.jpg",
       page_count: 238,
     },
     "Reframing Superintelligence": {
-      Image: "https://books.google.com/books/content?id=eRcmrgEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
       page_count: 227,
+      DisableMetadataCoverLookup: true,
     },
     "The Ethical Algorithm": {
-      Image: "https://covers.openlibrary.org/b/id/14674500-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1564725681i/44244975.jpg",
     },
     "The Age of Em": {
       Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1452923947i/26831944.jpg",
@@ -306,19 +306,19 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/10708874-L.jpg",
     },
     Cybernetics: {
-      Image: "https://covers.openlibrary.org/b/id/14428293-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1347245279i/294941.jpg",
     },
     "Computing Machinery and Intelligence": {
-      Image: "https://covers.openlibrary.org/b/id/14196301-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1615736937i/57406368.jpg",
     },
     "Mind Children": {
-      Image: "https://covers.openlibrary.org/b/id/9315107-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1348471443i/648195.jpg",
     },
     "The Society of Mind": {
       Image: "https://covers.openlibrary.org/b/id/4170566-L.jpg",
     },
     "On Intelligence": {
-      Image: "https://covers.openlibrary.org/b/id/8731272-L.jpg",
+      Image: "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1441230921i/27539.jpg",
     },
     "Homo Deus": {
       Image: "https://covers.openlibrary.org/b/id/14421556-L.jpg",
@@ -1480,15 +1480,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const pendingLookup = (async () => {
       const metadata = { coverUrl: "", pageCount: null, year: null };
+      const seedMetadata =
+        (entry && entry.Name && seededEntryMetadata[entry.Name]) || {};
+      const skipCoverLookup = Boolean(seedMetadata.DisableMetadataCoverLookup);
       try {
         const openLibraryMetadata = await queryOpenLibraryMetadata(entry);
-        metadata.coverUrl = sanitizeImageUrl(openLibraryMetadata.coverUrl || "");
+        if (!skipCoverLookup) {
+          metadata.coverUrl = sanitizeImageUrl(openLibraryMetadata.coverUrl || "");
+        }
         metadata.pageCount = normalizePositiveInteger(openLibraryMetadata.pageCount);
         metadata.year = normalizeYear(openLibraryMetadata.year);
 
-        if (!metadata.coverUrl || !metadata.pageCount || !metadata.year) {
+        if ((!skipCoverLookup && !metadata.coverUrl) || !metadata.pageCount || !metadata.year) {
           const googleBooksMetadata = await queryGoogleBooksMetadata(entry);
-          if (!metadata.coverUrl) {
+          if (!skipCoverLookup && !metadata.coverUrl) {
             metadata.coverUrl = sanitizeImageUrl(googleBooksMetadata.coverUrl || "");
           }
           if (!metadata.pageCount) {
@@ -1499,7 +1504,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        if (!metadata.coverUrl && entry.Author) {
+        if (!skipCoverLookup && !metadata.coverUrl && entry.Author) {
           metadata.coverUrl = getVerifiedAuthorPortraitFallback(entry.Author);
         }
 
@@ -1634,6 +1639,21 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <span class="open-link">Suggest <img class="link-icon" src="./images/arrow-up-outline.svg" /></span>
       </a>`
+    );
+  };
+
+  const renderCategoryBackToTopControl = (parent) => {
+    if (!parent) {
+      return;
+    }
+    parent.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="category-back-to-top-wrap">
+        <button type="button" class="category-back-to-top" data-back-to-top>
+          Back to top
+        </button>
+      </div>`
     );
   };
 
@@ -2068,6 +2088,7 @@ document.addEventListener("DOMContentLoaded", () => {
         categoryParent.innerHTML = "";
         renderCategoryFallbackState(categoryParent);
         renderBook(null, parentId, 0);
+        renderCategoryBackToTopControl(categoryParent);
       });
       return;
     }
@@ -2130,6 +2151,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
         renderBook(null, parentId, orderedEntries.length);
+        renderCategoryBackToTopControl(categoryParent);
       } catch (error) {
         logResilienceWarning(
           "category_render_skipped_due_error",
@@ -2412,6 +2434,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", (event) => {
     const clickTarget = event.target;
     if (!clickTarget || typeof clickTarget.closest !== "function") {
+      return;
+    }
+
+    const backToTopButton = clickTarget.closest("[data-back-to-top]");
+    if (backToTopButton) {
+      event.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
