@@ -191,6 +191,16 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const seededEntryMetadata = {
+    "The AI Revolution": {
+      Image: "https://logo.clearbit.com/waitbutwhy.com",
+    },
+    "The Coming Technological Singularity": {
+      Image: "https://logo.clearbit.com/nasa.gov",
+    },
+    "The Risks of Artificial Intelligence": {
+      Image:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Bill_Gates_at_the_European_Commission_-_2025_-_P067383-987995_%28cropped%29.jpg/330px-Bill_Gates_at_the_European_Commission_-_2025_-_P067383-987995_%28cropped%29.jpg",
+    },
     Superintelligence: {
       Image: "https://covers.openlibrary.org/b/id/8039542-L.jpg",
     },
@@ -277,7 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/8731272-L.jpg",
     },
     "Homo Deus": {
-      Image: "https://covers.openlibrary.org/b/id/14421556-L.jpg",
+      Image: "https://covers.openlibrary.org/b/isbn/9780062464316-L.jpg",
     },
     "Enlightenment Now": {
       Image: "https://covers.openlibrary.org/b/id/8147013-L.jpg",
@@ -301,7 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
       Image: "https://covers.openlibrary.org/b/id/6378519-L.jpg",
     },
     "Out of Control": {
-      Image: "https://covers.openlibrary.org/b/id/9242841-L.jpg",
+      Image: "https://covers.openlibrary.org/b/isbn/9780201483406-L.jpg",
     },
     "Whole Earth Discipline": {
       Image: "https://covers.openlibrary.org/b/id/11744008-L.jpg",
@@ -597,6 +607,30 @@ document.addEventListener("DOMContentLoaded", () => {
     "bill gates": "bill gates",
   };
 
+  const preferredOrganizationLogos = {
+    anthropic: "https://logo.clearbit.com/anthropic.com",
+    openai: "https://logo.clearbit.com/openai.com",
+    deepmind: "https://logo.clearbit.com/deepmind.google",
+    miri: "https://logo.clearbit.com/intelligence.org",
+    slatestarcodex: "https://logo.clearbit.com/slatestarcodex.com",
+  };
+
+  const preferredOrganizationAliases = {
+    anthropic: "anthropic",
+    openai: "openai",
+    deepmind: "deepmind",
+    miri: "miri",
+    "scott alexander": "slatestarcodex",
+  };
+
+  const preferredLinkLogoRules = [
+    { match: "anthropic.com", key: "anthropic" },
+    { match: "openai.com", key: "openai" },
+    { match: "deepmind.google", key: "deepmind" },
+    { match: "intelligence.org", key: "miri" },
+    { match: "slatestarcodex.com", key: "slatestarcodex" },
+  ];
+
   const normalizeAuthorLookupKey = (value = "") =>
     value
       .toString()
@@ -639,6 +673,29 @@ document.addEventListener("DOMContentLoaded", () => {
       const canonicalName = verifiedAuthorAliasToCanonicalName[candidate];
       if (canonicalName && verifiedAuthorPortraits[canonicalName]) {
         return sanitizeImageUrl(verifiedAuthorPortraits[canonicalName]);
+      }
+    }
+
+    return "";
+  };
+
+  const getPreferredOrganizationLogoFallback = (entry = {}) => {
+    const normalizedAuthor = normalizeAuthorLookupKey(entry.Author || "");
+    if (normalizedAuthor) {
+      for (const [alias, logoKey] of Object.entries(preferredOrganizationAliases)) {
+        if (normalizedAuthor.includes(alias)) {
+          return sanitizeImageUrl(preferredOrganizationLogos[logoKey] || "");
+        }
+      }
+    }
+
+    const normalizedLink = (entry.Link || "").toString().toLowerCase();
+    if (normalizedLink) {
+      const match = preferredLinkLogoRules.find(({ match: hostPart }) =>
+        normalizedLink.includes(hostPart)
+      );
+      if (match) {
+        return sanitizeImageUrl(preferredOrganizationLogos[match.key] || "");
       }
     }
 
@@ -880,6 +937,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     enrichEntryLinks(entry);
     applySeededMetadata(entry);
+    if (!entry.Image || !entry.Image.trim()) {
+      entry.Image = getPreferredOrganizationLogoFallback(entry);
+    }
     entry.Image = sanitizeImageUrl(entry.Image || "");
     const inferredYear = getEntryYear(entry);
     if (!entry.Year && inferredYear) {
