@@ -192,10 +192,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const seededEntryMetadata = {
     "The AI Revolution": {
-      Image: "https://logo.clearbit.com/waitbutwhy.com",
+      Image:
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Tim%20Urban%20%28blogger%29.jpg",
     },
     "The Coming Technological Singularity": {
-      Image: "https://logo.clearbit.com/nasa.gov",
+      Image:
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Vernor%20Vinge%20%28cropped%29.jpg",
     },
     "The Risks of Artificial Intelligence": {
       Image:
@@ -608,11 +610,14 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const preferredOrganizationLogos = {
-    anthropic: "https://logo.clearbit.com/anthropic.com",
-    openai: "https://logo.clearbit.com/openai.com",
-    deepmind: "https://logo.clearbit.com/deepmind.google",
-    miri: "https://logo.clearbit.com/intelligence.org",
-    slatestarcodex: "https://logo.clearbit.com/slatestarcodex.com",
+    anthropic:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Anthropic_logo.svg",
+    openai:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/OpenAI_logo_2025.svg",
+    deepmind:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/DeepMind_new_logo.svg",
+    miri: "https://intelligence.org/favicon.ico",
+    slatestarcodex: "https://slatestarcodex.com/favicon.ico",
   };
 
   const preferredOrganizationAliases = {
@@ -937,8 +942,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     enrichEntryLinks(entry);
     applySeededMetadata(entry);
-    if (!entry.Image || !entry.Image.trim()) {
-      entry.Image = getPreferredOrganizationLogoFallback(entry);
+    const preferredLogo = getPreferredOrganizationLogoFallback(entry);
+    if (preferredLogo) {
+      // Prefer explicit organization logos for these sources over fetched covers.
+      entry.Image = preferredLogo;
     }
     entry.Image = sanitizeImageUrl(entry.Image || "");
     const inferredYear = getEntryYear(entry);
