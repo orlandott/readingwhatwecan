@@ -254,10 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
       page_count: 209,
       Year: 2019,
     },
-    "The Risks of Artificial Intelligence": {
-      Image:
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Bill_Gates_June_2015.jpg/640px-Bill_Gates_June_2015.jpg",
-    },
     "Life 3.0": {
       Image: "https://covers.openlibrary.org/b/id/10239283-L.jpg",
     },
@@ -616,6 +612,81 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       return "";
     }
+  };
+
+  const verifiedAuthorPortraits = {
+    "holden karnofsky":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Holden_Karnofsky_0.jpg/330px-Holden_Karnofsky_0.jpg",
+    "julia galef":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/20150126_Julia_Galef_2.JPG/330px-20150126_Julia_Galef_2.JPG",
+    "sam altman":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Sam_Altman_TechCrunch_SF_2019_Day_2_Oct_3_%28cropped%29.jpg/330px-Sam_Altman_TechCrunch_SF_2019_Day_2_Oct_3_%28cropped%29.jpg",
+    "eliezer yudkowsky":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Eliezer_Yudkowsky%2C_Stanford_2006_%28square_crop%29.jpg/330px-Eliezer_Yudkowsky%2C_Stanford_2006_%28square_crop%29.jpg",
+    "nick bostrom":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Prof_Nick_Bostrom_324-1.jpg/330px-Prof_Nick_Bostrom_324-1.jpg",
+    "dario amodei":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Dario_Amodei_at_TechCrunch_Disrupt_2023_01.jpg/330px-Dario_Amodei_at_TechCrunch_Disrupt_2023_01.jpg",
+    "bill gates":
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Bill_Gates_at_the_European_Commission_-_2025_-_P067383-987995_%28cropped%29.jpg/330px-Bill_Gates_at_the_European_Commission_-_2025_-_P067383-987995_%28cropped%29.jpg",
+  };
+
+  const verifiedAuthorAliasToCanonicalName = {
+    holden: "holden karnofsky",
+    julia: "julia galef",
+    jjulia: "julia galef",
+    eliezer: "eliezer yudkowsky",
+    bostrom: "nick bostrom",
+    dario: "dario amodei",
+    "bill gates": "bill gates",
+  };
+
+  const normalizeAuthorLookupKey = (value = "") =>
+    value
+      .toString()
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9\s-]+/g, " ")
+      .replaceAll(/\s+/g, " ")
+      .trim();
+
+  const getVerifiedAuthorPortraitFallback = (author = "") => {
+    const normalizedAuthor = normalizeAuthorLookupKey(author);
+    if (!normalizedAuthor) {
+      return "";
+    }
+
+    const directPortrait = sanitizeImageUrl(verifiedAuthorPortraits[normalizedAuthor] || "");
+    if (directPortrait) {
+      return directPortrait;
+    }
+
+    const canonicalFromAlias = verifiedAuthorAliasToCanonicalName[normalizedAuthor];
+    if (canonicalFromAlias && verifiedAuthorPortraits[canonicalFromAlias]) {
+      return sanitizeImageUrl(verifiedAuthorPortraits[canonicalFromAlias]);
+    }
+
+    for (const [fullName, portraitUrl] of Object.entries(verifiedAuthorPortraits)) {
+      if (normalizedAuthor.includes(fullName)) {
+        return sanitizeImageUrl(portraitUrl);
+      }
+    }
+
+    const candidates = normalizedAuthor
+      .split(/,|;|\/|&|\band\b|\bet al\.?\b/gi)
+      .map((part) => normalizeAuthorLookupKey(part))
+      .filter(Boolean);
+
+    for (const candidate of candidates) {
+      if (verifiedAuthorPortraits[candidate]) {
+        return sanitizeImageUrl(verifiedAuthorPortraits[candidate]);
+      }
+      const canonicalName = verifiedAuthorAliasToCanonicalName[candidate];
+      if (canonicalName && verifiedAuthorPortraits[canonicalName]) {
+        return sanitizeImageUrl(verifiedAuthorPortraits[canonicalName]);
+      }
+    }
+
+    return "";
   };
 
   const createTimeoutError = (operationName, timeoutMs) => {
@@ -1426,6 +1497,10 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!metadata.year) {
             metadata.year = normalizeYear(googleBooksMetadata.year);
           }
+        }
+
+        if (!metadata.coverUrl && entry.Author) {
+          metadata.coverUrl = getVerifiedAuthorPortraitFallback(entry.Author);
         }
 
       } catch (error) {
