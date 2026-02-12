@@ -8,78 +8,202 @@
   <meta content="Reading What We Can" property="twitter:title" />
   <meta content="https://uploads-ssl.webflow.com/622160bba1d5c0dcf96f8bdf/628aa6f158ffb73d323ba215_openpic-rwwc.png" property="twitter:image" />
   <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://ajax.googleapis.com https://d3e54v103j8qbb.cloudfront.net https://scripts.simpleanalyticscdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://openlibrary.org https://www.googleapis.com https://docs.google.com https://script.google.com https://scripts.simpleanalyticscdn.com https://queue.simpleanalyticscdn.com; frame-src https://docs.google.com; form-action 'self' https://docs.google.com https://script.google.com; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+  />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" type="text/javascript"></script>
-  <script type="text/javascript">
-    WebFont.load({
-      google: {
-        families: [
-          "Open Sans:300,300italic,400,400italic,600,600italic,700,700italic,800,800italic",
-          "Sora:regular,700",
-          "Hahmlet:regular,700",
-          "JetBrains Mono:regular",
-        ],
-      },
-    });
-  </script>
+  <script src="./webfont-loader.js" type="text/javascript"></script>
   <link href="images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
   <link href="images/webclip.ico" rel="apple-touch-icon" />
   <link href="./style.css" rel="stylesheet" type="text/css" />
+  <script src="./suggestion-form-config.js" type="text/javascript"></script>
+  <script src="./resource-guardrails-config.js" type="text/javascript"></script>
   <script src="./script.js" type="text/javascript" defer></script>
   <script src="./books.js" type="text/javascript"></script> <!-- Use local books.js for now -->
 </head>
-<body class="bg-gray-900 text-gray-100">
-  <header class="sticky top-0 bg-gray-800 shadow-lg z-50">
-    <nav class="container mx-auto flex justify-between items-center p-4">
+<body class="site-body">
+  <header class="site-header sticky top-0 z-50">
+    <nav class="site-nav container mx-auto flex justify-between items-center p-4">
       <a href="index.html" class="flex items-center" aria-current="page">
         <img src="images/Group-55.png" width="209" alt="Reading What We Can Logo" class="nav-logo" />
       </a>
-      <a href="mailto:esben@apartresearch.com?subject=Reading%20what%20we%20can" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition">Contact</a>
+      <a href="mailto:esben@kran.ai?subject=Reading%20what%20we%20can" class="contact-button">Contact</a>
     </nav>
   </header>
   <div class="section-3 py-12">
     <div class="container mx-auto">
-      <h1 class="text-4xl font-bold text-center mb-2">Reading What We Can
-        <span class="block text-xl italic text-gray-400">Reading lists for the future</span>
+      <h1 class="hero-title text-4xl font-bold text-center mb-2">Reading What We Can
+        <span class="hero-subtitle block text-xl italic">Reading lists for the future</span>
       </h1>
-      <p class="text-lg text-center mb-6 max-w-2xl mx-auto">
-        The Gauntlet is a challenge to read 20 books or articles in 20 days. Post online with
-        <a href="https://twitter.com/search?q=%23rwwc" target="_blank" class="text-indigo-400 hover:underline">#rwwc</a>.
-        It is <strong>in development</strong> so
-        <a href="mailto:esben@apartresearch.com?subject=AI%20Gauntlet%20suggestion%3A%20" class="text-indigo-400 hover:underline">write to us</a>
-        if you would like a feature, learning path, book, or paper added to the project!
+      <p class="hero-copy text-lg text-center mb-6 max-w-2xl mx-auto">
+        AI progress is accelerating. Reading What We Can curates the books, essays, papers, and stories
+        that help people build clear models of AI risk and opportunity.
+        <span class="hero-contact-line">
+          <a href="mailto:esben@kran.ai?subject=AI%20Gauntlet%20suggestion%3A%20" class="inline-link">Write to us</a>
+          if you have suggestions for new categories, features, or if you'd like to volunteer.
+        </span>
       </p>
-      <a href="https://github.com/apartresearch/readingwhatwecan" class="block text-center text-indigo-400 hover:underline mb-8">Contribute by submitting a pull request</a>
+      <a href="https://github.com/apartresearch/readingwhatwecan" class="contribute-link block text-center mb-8">Contribute by submitting a pull request</a>
     </div>
     <div class="container mx-auto">
       <div class="gauntlet-tabs flex flex-col md:flex-row gap-4">
         <div class="gauntlet-tabs-menu w-full md:w-1/4">
-          <a data-w-tab="I am a beginner in AI safety" class="gauntlet-tab block p-4 bg-gray-800 rounded-lg mb-2 text-center md:text-left hover:bg-indigo-600 transition w--current">AI safety basics</a>
-          <a data-w-tab="I come from ML engineering" class="gauntlet-tab block p-4 bg-gray-800 rounded-lg mb-2 text-center md:text-left hover:bg-indigo-600 transition">ML engineering & AI safety</a>
-          <a data-w-tab="I come from AI safety and want to upskill in ML" class="gauntlet-tab block p-4 bg-gray-800 rounded-lg mb-2 text-center md:text-left hover:bg-indigo-600 transition">ML upskilling</a>
-          <a data-w-tab="Sci-fi" class="gauntlet-tab block p-4 bg-gray-800 rounded-lg mb-2 text-center md:text-left hover:bg-indigo-600 transition">AI safety-relevant sci-fi</a>
+          <a data-w-tab="entry-point" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition w--current">The Entry Point</a>
+          <a data-w-tab="canon" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Canon</a>
+          <a data-w-tab="problem-space" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Problem Space</a>
+          <a data-w-tab="technical-frontier" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">The Technical Frontier</a>
+          <a data-w-tab="speculative-fiction" class="gauntlet-tab block p-4 rounded-lg mb-2 text-center md:text-left transition">Speculative Fiction</a>
+          <div class="reading-dashboard" role="region" aria-label="Your reading list and progress">
+            <details id="reading-list-collapsible" class="reading-dashboard-collapsible" open>
+              <summary class="reading-dashboard-toggle">
+                <span class="reading-dashboard-title">Your reading list</span>
+                <span id="reading-list-summary" class="reading-dashboard-summary">
+                  Save resources to track progress.
+                </span>
+              </summary>
+              <div class="reading-dashboard-body">
+                <div id="reading-list-preview" class="reading-list-preview" aria-live="polite"></div>
+              </div>
+            </details>
+          </div>
         </div>
         <div class="w-tab-content w-full md:w-3/4">
-          <div data-w-tab="I am a beginner in AI safety" class="w-tab-pane w--tab-active">
-            <div id="beginner-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div class="category-controls" role="region" aria-label="Category sorting and filtering">
+            <label class="category-control-label" for="category-sort-control">
+              Sort
+              <select id="category-sort-control" class="category-control-input">
+                <option value="year_desc">Newest publication year</option>
+                <option value="year_asc">Oldest publication year</option>
+                <option value="title_asc">Title (A-Z)</option>
+              </select>
+            </label>
+            <label class="category-control-label" for="category-type-control">
+              Type
+              <select id="category-type-control" class="category-control-input">
+                <option value="all">All types</option>
+                <option value="book">Book</option>
+                <option value="article">Article</option>
+                <option value="pdf">PDF</option>
+                <option value="lesswrong">LessWrong</option>
+                <option value="arxiv">ArXiv</option>
+                <option value="google_docs">Google Docs</option>
+              </select>
+            </label>
+            <label class="category-control-label" for="category-year-from-control">
+              From year
+              <select id="category-year-from-control" class="category-control-input">
+                <option value="">Any</option>
+              </select>
+            </label>
+            <label class="category-control-label" for="category-year-to-control">
+              To year
+              <select id="category-year-to-control" class="category-control-input">
+                <option value="">Any</option>
+              </select>
+            </label>
+            <button id="category-filter-reset" type="button" class="category-filter-reset">
+              Reset filters
+            </button>
           </div>
-          <div data-w-tab="I come from ML engineering" class="w-tab-pane">
-            <div id="ml-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="entry-point" class="w-tab-pane w--tab-active">
+            <div class="category-intro">
+              <h3 class="category-intro-title">The Entry Point (Primers & Essays)</h3>
+              <p class="category-intro-summary">Recent, high-impact essays and accessible books that define the current conversation.</p>
+              <p class="category-intro-audience"><strong>Best for:</strong> Beginners looking for a high-level understanding of the stakes without getting bogged down in math or dense academic jargon.</p>
+            </div>
+            <div id="entry-point-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
-          <div data-w-tab="I come from AI safety and want to upskill in ML" class="w-tab-pane">
-            <div id="aisafety-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="canon" class="w-tab-pane">
+            <div class="category-intro">
+              <h3 class="category-intro-title">The Canon (Foundational Books)</h3>
+              <p class="category-intro-summary">Major works that established the vocabulary and theoretical groundwork of the field.</p>
+              <p class="category-intro-audience"><strong>Best for:</strong> Readers who want a deep, comprehensive dive into the philosophy, strategy, and future scenarios of AGI.</p>
+            </div>
+            <div id="canon-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
-          <div data-w-tab="Sci-fi" class="w-tab-pane">
-            <div id="scifi-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div data-w-tab="problem-space" class="w-tab-pane">
+            <div class="category-intro">
+              <h3 class="category-intro-title">The Problem Space (Research Agendas & Concepts)</h3>
+              <p class="category-intro-summary">Papers defining specific failure modes (misalignment, power-seeking, and gaming) and concrete research targets.</p>
+              <p class="category-intro-audience"><strong>Best for:</strong> Researchers and engineers wanting to understand specific definitions of safety, alignment, and risk factors proposed by the field.</p>
+            </div>
+            <div id="problem-space-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+          <div data-w-tab="technical-frontier" class="w-tab-pane">
+            <div class="category-intro">
+              <h3 class="category-intro-title">The Technical Frontier (Mechanisms & Interpretability)</h3>
+              <p class="category-intro-summary">Cutting-edge engineering work on making models safer, more honest, and more interpretable.</p>
+              <p class="category-intro-audience"><strong>Best for:</strong> ML engineers and practitioners looking for applied methodologies (like RLHF or Circuits) and current state-of-the-art research.</p>
+            </div>
+            <div id="technical-frontier-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+          <div data-w-tab="speculative-fiction" class="w-tab-pane">
+            <div class="category-intro">
+              <h3 class="category-intro-title">Speculative Fiction (AI-Relevant Sci-Fi)</h3>
+              <p class="category-intro-summary">Narratives that explore the texture of living with advanced AI.</p>
+              <p class="category-intro-audience"><strong>Best for:</strong> Exploring alignment and long-term AI concepts through narrative and allegory.</p>
+            </div>
+            <div id="speculative-fiction-parent" class="gauntlet-wrapper grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
         </div>
       </div>
     </div>
+    <div class="container mx-auto">
+      <section id="suggestion-form-section" class="suggestion-section">
+        <div class="suggestion-shell">
+          <div>
+            <h2 class="suggestion-title">Suggest a new option</h2>
+            <p class="suggestion-copy">Share a book or article and we will send your suggestion to our submissions sheet.</p>
+          </div>
+          <form id="book-suggestion-form" class="suggestion-form">
+            <div class="suggestion-grid">
+              <label class="field-label">
+                Title
+                <input id="suggestion-name" name="name" type="text" required maxlength="140" placeholder="Book or article title" />
+              </label>
+              <label class="field-label">
+                Author
+                <input id="suggestion-author" name="author" type="text" required maxlength="120" placeholder="Author name" />
+              </label>
+              <label class="field-label">
+                Your email (optional, if you'd like to receive very rare updates)
+                <input id="suggestion-email" name="email" type="email" maxlength="160" placeholder="name@example.com" />
+              </label>
+              <label class="field-label">
+                Link (if it's a book, send us a Goodreads link)
+                <input id="suggestion-link" name="link" type="url" required placeholder="https://..." />
+              </label>
+              <label class="field-label">
+                Pages
+                <input id="suggestion-pages" name="pages" type="number" min="1" step="1" placeholder="Optional" />
+              </label>
+              <label class="field-label">
+                Reading track
+                <select id="suggestion-track" name="track">
+                  <option value="entry_point">The Entry Point (Primers & Essays)</option>
+                  <option value="canon">The Canon (Foundational Books)</option>
+                  <option value="problem_space">The Problem Space (Research Agendas & Concepts)</option>
+                  <option value="technical_frontier">The Technical Frontier (Mechanisms & Interpretability)</option>
+                  <option value="speculative_fiction">Speculative Fiction (AI-Relevant Sci-Fi)</option>
+                </select>
+              </label>
+            </div>
+            <div class="suggestion-actions">
+              <button type="submit" class="suggestion-submit">Send suggestion</button>
+            </div>
+            <p id="suggestion-feedback" class="suggestion-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+    </div>
   </div>
-  <div id="ai-gauntlet" class="section-2 py-12 bg-gray-800">
+  <div id="ai-gauntlet" class="section-2 py-12 site-footer-note">
     <div class="container mx-auto text-center">
       <p class="text-lg max-w-3xl mx-auto">
-        This was originally a project called The AI Safety Gauntlet: "The Gauntlet is a challenge to read 20 books or articles in 20 days. The below books and articles are meant as an introduction to the field of AI safety. Read them and post online with #AIgauntlet. In development. Write to us if you would like a feature, learning path, book or paper added to the project!" ReadingWhatWeCan is a spinout from Apart Research.
+        Reading What We Can began as The AI Safety Gauntlet and has evolved into a community map of ideas for understanding and shaping AI's trajectory. It remains an open, community-improvable project.
       </p>
     </div>
   </div>
